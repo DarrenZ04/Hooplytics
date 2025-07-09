@@ -7,41 +7,25 @@
       font-family: Arial, sans-serif;
       margin: 20px;
     }
-
     table {
       border-collapse: collapse;
       width: 100%;
       margin-top: 10px;
     }
-
     th, td {
       border: 1px solid #ddd;
       padding: 6px 10px;
       text-align: left;
       font-size: 14px;
     }
-
     th {
       background-color: #f2f2f2;
     }
-
-    h1, h2, h3 {
-      margin-top: 30px;
+    input, button {
+      margin: 6px 0;
     }
-
-    input {
-      margin: 5px 0;
-    }
-
     button {
-      margin: 10px 0;
       padding: 6px 12px;
-      font-size: 14px;
-    }
-
-    #punt_categories {
-      margin-top: 10px;
-      margin-bottom: 20px;
     }
   </style>
 </head>
@@ -50,7 +34,7 @@
 
   <h2>Simulate Draft</h2>
   <label># of Teams: <input type="number" id="num_teams" value="10"></label><br>
-  <label># of Rounds: <input type="number" id="num_rounds" value="13"></label><br>
+  <label># of Rounds: <input type="number" id="num_rounds" value="5"></label><br>
   <label>Your Draft Position (1-based): <input type="number" id="your_pick" value="1"></label><br>
 
   <h3>Punt Categories</h3>
@@ -140,7 +124,6 @@
       .then(data => {
         const yourTeamBody = document.querySelector("#your_team_table tbody");
         const draftPoolBody = document.querySelector("#draft_pool_table tbody");
-
         yourTeamBody.innerHTML = '';
         draftPoolBody.innerHTML = '';
 

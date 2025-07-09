@@ -25,7 +25,7 @@ def fetch_and_rank_players(categories, invert_categories=None, min_gp=10, punt_c
 
     # Keep GP separate from stat standardization
     selected = df_filtered[['PLAYER_NAME', 'GP'] + categories].copy()
-    numeric = selected.drop(columns=['PLAYER_NAME', 'GP'])  # ✅ EXCLUDE GP from z-scoring
+    numeric = selected.drop(columns=['PLAYER_NAME', 'GP'])
 
     # Standardize fantasy stats only (not GP)
     standardized_stats = (numeric - numeric.mean()) / numeric.std()
@@ -53,11 +53,9 @@ def fetch_and_rank_players(categories, invert_categories=None, min_gp=10, punt_c
 
     return standardized.sort_values(by='ADJUSTED_Z', ascending=False)
 
-
 @app.route('/')
 def index():
     return render_template('index.html')
-
 
 @app.route('/simulate_draft', methods=['POST'])
 def simulate_draft():
@@ -70,9 +68,9 @@ def simulate_draft():
     num_teams = int(data.get('num_teams'))
     num_rounds = int(data.get('num_rounds'))
 
-    ranked = fetch_and_rank_players(categories, invert, min_gp, punt).reset_index(drop=True)
+    global_ranked = fetch_and_rank_players(categories, invert, min_gp, punt_categories=None).reset_index(drop=True)
+    user_ranked = fetch_and_rank_players(categories, invert, min_gp, punt_categories=punt).reset_index(drop=True)
 
-    # Raw stats
     raw_data = leaguedashplayerstats.LeagueDashPlayerStats(season='2024-25', per_mode_detailed='PerGame')
     raw_df = raw_data.get_data_frames()[0]
     raw_df = raw_df[['PLAYER_NAME', 'PTS', 'REB', 'AST', 'STL', 'BLK', 'FGM', 'FGA', 'FTM', 'FTA', 'FG3M', 'TOV']]
@@ -84,15 +82,21 @@ def simulate_draft():
 
     team_rosters = {i: [] for i in range(num_teams)}
 
-    for pick_num in range(min(len(ranked), num_rounds * num_teams)):
+    for pick_num in range(min(len(global_ranked), num_rounds * num_teams)):
         team_idx = draft_order[pick_num]
-        player = ranked.iloc[pick_num]
+        player = global_ranked.iloc[pick_num]
         player_name = player['PLAYER_NAME']
+
         raw_stats = raw_df[raw_df['PLAYER_NAME'] == player_name].to_dict(orient='records')[0]
+
+        if team_idx == user_pick - 1:
+            user_score = user_ranked[user_ranked['PLAYER_NAME'] == player_name]['ADJUSTED_Z'].values[0]
+        else:
+            user_score = player['ADJUSTED_Z']
 
         team_rosters[team_idx].append({
             'name': player_name,
-            'adjusted_z': round(player['ADJUSTED_Z'], 2),
+            'adjusted_z': round(user_score, 2),
             'gp': int(player['GP']),
             'stats': {k: round(v, 1) for k, v in raw_stats.items() if k != 'PLAYER_NAME'}
         })
@@ -101,15 +105,15 @@ def simulate_draft():
 
     full_draft_list = []
     for i in range(num_teams * num_rounds):
-        if i >= len(ranked):
+        if i >= len(global_ranked):
             break
-        player = ranked.iloc[i]
-        player_name = player['PLAYER_NAME']
-        raw_stats = raw_df[raw_df['PLAYER_NAME'] == player_name].to_dict(orient='records')[0]
+        player = global_ranked.iloc[i]
+        raw_stats = raw_df[raw_df['PLAYER_NAME'] == player['PLAYER_NAME']].to_dict(orient='records')[0]
+        user_score = user_ranked[user_ranked['PLAYER_NAME'] == player['PLAYER_NAME']]['ADJUSTED_Z'].values[0]
 
         full_draft_list.append({
-            'name': player_name,
-            'adjusted_z': round(player['ADJUSTED_Z'], 2),
+            'name': player['PLAYER_NAME'],
+            'adjusted_z': round(user_score, 2),
             'gp': int(player['GP']),
             'stats': {k: round(v, 1) for k, v in raw_stats.items() if k != 'PLAYER_NAME'}
         })
@@ -118,7 +122,6 @@ def simulate_draft():
         'your_team': user_team,
         'top_draft_pool': full_draft_list
     })
-
 
 if __name__ == '__main__':
     app.run(debug=True)
