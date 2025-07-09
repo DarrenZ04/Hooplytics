@@ -1,51 +1,198 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Fantasy Basketball Optimizer</title>
+  <title>Fantasy Basketball Draft Optimizer</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 10px;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 6px 10px;
+      text-align: left;
+      font-size: 14px;
+    }
+
+    th {
+      background-color: #f2f2f2;
+    }
+
+    h1, h2, h3 {
+      margin-top: 30px;
+    }
+
+    input {
+      margin: 5px 0;
+    }
+
+    button {
+      margin: 10px 0;
+      padding: 6px 12px;
+      font-size: 14px;
+    }
+
+    #punt_categories {
+      margin-top: 10px;
+      margin-bottom: 20px;
+    }
+  </style>
 </head>
 <body>
-  <h1>Fantasy Basketball Draft Optimizer</h1>
+  <h1>Fantasy Basketball Draft Optimizer (2024–25)</h1>
 
   <h2>Simulate Draft</h2>
-<label># of Teams: <input type="number" id="num_teams" value="10"></label><br>
-<label># of Rounds: <input type="number" id="num_rounds" value="5"></label><br>
-<label>Your Draft Position (1-based): <input type="number" id="your_pick" value="1"></label><br>
-<button onclick="simulateDraft()">Simulate Draft</button>
+  <label># of Teams: <input type="number" id="num_teams" value="10"></label><br>
+  <label># of Rounds: <input type="number" id="num_rounds" value="13"></label><br>
+  <label>Your Draft Position (1-based): <input type="number" id="your_pick" value="1"></label><br>
 
-<h3>Your Team:</h3>
-<ol id="your_team"></ol>
+  <h3>Punt Categories</h3>
+  <div id="punt_categories">
+    <label><input type="checkbox" value="PTS"> Points</label><br>
+    <label><input type="checkbox" value="REB"> Rebounds</label><br>
+    <label><input type="checkbox" value="AST"> Assists</label><br>
+    <label><input type="checkbox" value="STL"> Steals</label><br>
+    <label><input type="checkbox" value="BLK"> Blocks</label><br>
+    <label><input type="checkbox" value="FGM"> FG Made</label><br>
+    <label><input type="checkbox" value="FGA"> FG Attempted</label><br>
+    <label><input type="checkbox" value="FTM"> FT Made</label><br>
+    <label><input type="checkbox" value="FTA"> FT Attempted</label><br>
+    <label><input type="checkbox" value="FG3M"> 3PM</label><br>
+    <label><input type="checkbox" value="TOV"> Turnovers</label><br>
+  </div>
 
-<script>
-function simulateDraft() {
-  const numTeams = document.getElementById("num_teams").value;
-  const numRounds = document.getElementById("num_rounds").value;
-  const yourPick = document.getElementById("your_pick").value;
+  <button onclick="simulateDraft()">Simulate Draft</button>
 
-  fetch('/simulate_draft', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      categories: ['PTS', 'REB', 'AST', 'STL', 'BLK', 'FG_PCT', 'FT_PCT', 'FG3M', 'TOV'],
-      invert: ['TOV'],
-      punt: [],
-      min_gp: 20,
-      user_pick: yourPick,
-      num_teams: numTeams,
-      num_rounds: numRounds
-    })
-  })
-  .then(res => res.json())
-  .then(data => {
-    const teamList = document.getElementById('your_team');
-    teamList.innerHTML = '';
-    data.your_team.forEach(player => {
-      const li = document.createElement('li');
-      const stats = Object.entries(player.stats).map(([key, val]) => `${key}: ${val}`).join(', ');
-      li.innerText = `${player.name} — Score: ${player.adjusted_z} (GP: ${player.gp}) | ${stats}`;
-      teamList.appendChild(li);
-    });
-  });
-}
-</script>
+  <h3>Your Team</h3>
+  <table id="your_team_table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Player</th>
+        <th>Score</th>
+        <th>GP</th>
+        <th>PTS</th>
+        <th>REB</th>
+        <th>AST</th>
+        <th>STL</th>
+        <th>BLK</th>
+        <th>FG</th>
+        <th>FT</th>
+        <th>3PM</th>
+        <th>TOV</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <h3>Top Draft Pool</h3>
+  <table id="draft_pool_table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Player</th>
+        <th>Score</th>
+        <th>GP</th>
+        <th>PTS</th>
+        <th>REB</th>
+        <th>AST</th>
+        <th>STL</th>
+        <th>BLK</th>
+        <th>FG</th>
+        <th>FT</th>
+        <th>3PM</th>
+        <th>TOV</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    function simulateDraft() {
+      const numTeams = document.getElementById("num_teams").value;
+      const numRounds = document.getElementById("num_rounds").value;
+      const yourPick = document.getElementById("your_pick").value;
+
+      const puntChecks = document.querySelectorAll("#punt_categories input[type=checkbox]:checked");
+      const puntCategories = Array.from(puntChecks).map(cb => cb.value);
+
+      fetch('/simulate_draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          categories: ['PTS', 'REB', 'AST', 'STL', 'BLK', 'FGM', 'FGA', 'FTM', 'FTA', 'FG3M', 'TOV'],
+          invert: ['TOV'],
+          punt: puntCategories,
+          min_gp: 20,
+          user_pick: yourPick,
+          num_teams: numTeams,
+          num_rounds: numRounds
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        const yourTeamBody = document.querySelector("#your_team_table tbody");
+        const draftPoolBody = document.querySelector("#draft_pool_table tbody");
+
+        yourTeamBody.innerHTML = '';
+        draftPoolBody.innerHTML = '';
+
+        data.your_team.forEach((player, index) => {
+          const stats = player.stats;
+          const fgPct = stats.FGA ? (stats.FGM / stats.FGA * 100).toFixed(1) : '0.0';
+          const ftPct = stats.FTA ? (stats.FTM / stats.FTA * 100).toFixed(1) : '0.0';
+
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${index + 1}</td>
+            <td>${player.name}</td>
+            <td>${player.adjusted_z}</td>
+            <td>${player.gp}</td>
+            <td>${stats.PTS}</td>
+            <td>${stats.REB}</td>
+            <td>${stats.AST}</td>
+            <td>${stats.STL}</td>
+            <td>${stats.BLK}</td>
+            <td>${stats.FGM}/${stats.FGA} (${fgPct}%)</td>
+            <td>${stats.FTM}/${stats.FTA} (${ftPct}%)</td>
+            <td>${stats.FG3M}</td>
+            <td>${stats.TOV}</td>
+          `;
+          yourTeamBody.appendChild(row);
+        });
+
+        data.top_draft_pool.forEach((player, index) => {
+          const stats = player.stats;
+          const fgPct = stats.FGA ? (stats.FGM / stats.FGA * 100).toFixed(1) : '0.0';
+          const ftPct = stats.FTA ? (stats.FTM / stats.FTA * 100).toFixed(1) : '0.0';
+
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${index + 1}</td>
+            <td>${player.name}</td>
+            <td>${player.adjusted_z}</td>
+            <td>${player.gp}</td>
+            <td>${stats.PTS}</td>
+            <td>${stats.REB}</td>
+            <td>${stats.AST}</td>
+            <td>${stats.STL}</td>
+            <td>${stats.BLK}</td>
+            <td>${stats.FGM}/${stats.FGA} (${fgPct}%)</td>
+            <td>${stats.FTM}/${stats.FTA} (${ftPct}%)</td>
+            <td>${stats.FG3M}</td>
+            <td>${stats.TOV}</td>
+          `;
+          draftPoolBody.appendChild(row);
+        });
+      });
+    }
+  </script>
 </body>
 </html>
