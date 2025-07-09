@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Fantasy Basketball Optimizer</title>
+</head>
+<body>
+  <h1>Fantasy Basketball Draft Optimizer</h1>
+
+  <h2>Simulate Draft</h2>
+<label># of Teams: <input type="number" id="num_teams" value="10"></label><br>
+<label># of Rounds: <input type="number" id="num_rounds" value="5"></label><br>
+<label>Your Draft Position (1-based): <input type="number" id="your_pick" value="1"></label><br>
+<button onclick="simulateDraft()">Simulate Draft</button>
+
+<h3>Your Team:</h3>
+<ol id="your_team"></ol>
+
+<script>
+function simulateDraft() {
+  const numTeams = document.getElementById("num_teams").value;
+  const numRounds = document.getElementById("num_rounds").value;
+  const yourPick = document.getElementById("your_pick").value;
+
+  fetch('/simulate_draft', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      categories: ['PTS', 'REB', 'AST', 'STL', 'BLK', 'FG_PCT', 'FT_PCT', 'FG3M', 'TOV'],
+      invert: ['TOV'],
+      punt: [],
+      min_gp: 20,
+      user_pick: yourPick,
+      num_teams: numTeams,
+      num_rounds: numRounds
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    const teamList = document.getElementById('your_team');
+    teamList.innerHTML = '';
+    data.your_team.forEach(player => {
+      const li = document.createElement('li');
+      const stats = Object.entries(player.stats).map(([key, val]) => `${key}: ${val}`).join(', ');
+      li.innerText = `${player.name} — Score: ${player.adjusted_z} (GP: ${player.gp}) | ${stats}`;
+      teamList.appendChild(li);
+    });
+  });
+}
+</script>
+</body>
+</html>

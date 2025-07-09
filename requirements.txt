@@ -1,0 +1,3 @@
+Flask
+nba_api
+pandas
