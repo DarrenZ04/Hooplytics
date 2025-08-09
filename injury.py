@@ -38,7 +38,9 @@ for match in pattern.finditer(injury_text):
 df = pd.DataFrame(players, columns=["Player", "Estimated Return Date"])
 
 # Save to CSV
-df.to_csv("nba_injuries_full_clean.csv", index=False)
+from pathlib import Path
+DATA_DIR = Path(__file__).resolve().parent
+df.to_csv(DATA_DIR / "nba_injuries_full_clean.csv", index=False)
 
 print("Saved cleaned injury report to nba_injuries_full_clean.csv")
 print(df.head())

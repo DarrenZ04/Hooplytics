@@ -1,10 +1,14 @@
 from flask import Flask, request, jsonify, render_template
 from nba_api.stats.endpoints import leaguedashplayerstats
+from pathlib import Path
 import numpy as np
 import pandas as pd
 from datetime import datetime
 
+import os
 app = Flask(__name__)
+if 'SECRET_KEY' in os.environ:
+    app.config['SECRET_KEY'] = os.environ['SECRET_KEY']
 
 def fetch_and_rank_players(categories, invert_categories=None, min_gp=10, punt_categories=None):
     data = leaguedashplayerstats.LeagueDashPlayerStats(season='2024-25', per_mode_detailed='PerGame')
@@ -24,7 +28,8 @@ def fetch_and_rank_players(categories, invert_categories=None, min_gp=10, punt_c
     # Load injury data and calculate penalty
     injury_penalty = {}
     try:
-        inj_df = pd.read_csv('nba_injuries_full_clean.csv')
+        DATA_DIR = Path(__file__).resolve().parent
+        inj_df = pd.read_csv(DATA_DIR / 'nba_injuries_full_clean.csv')
         # NBA season: Oct 1 to Apr 15
         season_start = datetime(2024, 10, 1)
         season_end = datetime(2025, 4, 15)
@@ -63,6 +68,8 @@ def fetch_and_rank_players(categories, invert_categories=None, min_gp=10, punt_c
     categories += ['FG_CONTRIB', 'FT_CONTRIB']
 
     # Keep GP separate from stat standardization
+    # Use robust path for database CSV if needed elsewhere
+    # db_df = pd.read_csv(DATA_DIR / 'database_24_25.csv')
     selected = df_filtered[['PLAYER_NAME', 'GP'] + categories].copy()
     numeric = selected.drop(columns=['PLAYER_NAME', 'GP'])
 
@@ -217,4 +224,6 @@ def simulate_draft():
     })
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    import os
+    app.config['DEBUG'] = os.getenv('FLASK_ENV') == 'development'
+    app.run()
