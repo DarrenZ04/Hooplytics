@@ -7,12 +7,10 @@ from datetime import datetime
 
 import os
 app = Flask(__name__)
-if 'SECRET_KEY' in os.environ:
-    app.config['SECRET_KEY'] = os.environ['SECRET_KEY']
 
 def fetch_and_rank_players(categories, invert_categories=None, min_gp=10, punt_categories=None):
-    data = leaguedashplayerstats.LeagueDashPlayerStats(season='2024-25', per_mode_detailed='PerGame')
-    df = data.get_data_frames()[0]
+    DATA_DIR = Path(__file__).resolve().parent
+    df = pd.read_csv(DATA_DIR / 'database_24_25.csv')
     # NBA team IDs for 2024–25 season
     nba_team_ids = [1610612737, 1610612738, 1610612739, 1610612740, 1610612741, 1610612742, 1610612743, 1610612744,
                    1610612745, 1610612746, 1610612747, 1610612748, 1610612749, 1610612750, 1610612751, 1610612752,
@@ -145,8 +143,8 @@ def simulate_draft():
     global_ranked = fetch_and_rank_players(categories, invert, min_gp, punt_categories=None).reset_index(drop=True)
     user_ranked = fetch_and_rank_players(categories, invert, min_gp, punt_categories=punt).reset_index(drop=True)
 
-    raw_data = leaguedashplayerstats.LeagueDashPlayerStats(season='2024-25', per_mode_detailed='PerGame')
-    raw_df = raw_data.get_data_frames()[0]
+    DATA_DIR = Path(__file__).resolve().parent
+    raw_df = pd.read_csv(DATA_DIR / 'database_24_25.csv')
     nba_team_ids = [1610612737, 1610612738, 1610612739, 1610612740, 1610612741, 1610612742, 1610612743, 1610612744,
                    1610612745, 1610612746, 1610612747, 1610612748, 1610612749, 1610612750, 1610612751, 1610612752,
                    1610612753, 1610612754, 1610612755, 1610612756, 1610612757, 1610612758, 1610612759, 1610612760,
