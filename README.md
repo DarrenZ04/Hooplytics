@@ -1,1 +1,1 @@
-# fantasyDraft
+My Fantasy Draft Optimizer
