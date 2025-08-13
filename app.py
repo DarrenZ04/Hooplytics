@@ -199,3 +199,5 @@ def simulate_draft():
         'your_team': user_team,
         'top_draft_pool': full_draft_list
     })
+# if __name__ == '__main__':
+#     app.run(debug=True)
