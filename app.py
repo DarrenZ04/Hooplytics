@@ -6,6 +6,7 @@ from datetime import datetime
 app = Flask(__name__)
 
 def fetch_and_rank_players(categories, invert_categories=None, min_gp=10, punt_categories=None):
+    # Always invert turnovers so lower is better
     df = pd.read_csv('nba_top100_2024.csv')
 
     df_filtered = df[df['GP'] >= min_gp].copy()
@@ -39,17 +40,15 @@ def fetch_and_rank_players(categories, invert_categories=None, min_gp=10, punt_c
     except Exception:
         pass
 
-    # Weighted FG contribution
+    # FG% and FT% impact scoring
     league_avg_fg_pct = df_filtered['FGM'].sum() / df_filtered['FGA'].sum()
-    df_filtered['FG_CONTRIB'] = df_filtered['FGM'] - league_avg_fg_pct * df_filtered['FGA']
-
-    # Weighted FT contribution
+    df_filtered['FG_IMPACT'] = df_filtered['FGM'] - league_avg_fg_pct * df_filtered['FGA']
     league_avg_ft_pct = df_filtered['FTM'].sum() / df_filtered['FTA'].sum()
-    df_filtered['FT_CONTRIB'] = df_filtered['FTM'] - league_avg_ft_pct * df_filtered['FTA']
+    df_filtered['FT_IMPACT'] = df_filtered['FTM'] - league_avg_ft_pct * df_filtered['FTA']
 
-    # Replace raw percentages with contribution stats
+    # Replace raw percentages and volume with impact stats
     categories = [c for c in categories if c not in ['FG_PCT', 'FGA', 'FGM', 'FT_PCT', 'FTA', 'FTM']]
-    categories += ['FG_CONTRIB', 'FT_CONTRIB']
+    categories += ['FG_IMPACT', 'FT_IMPACT']
 
     # Keep GP separate from stat standardization
     selected = df_filtered[['PLAYER_NAME', 'GP'] + categories].copy()
@@ -57,44 +56,29 @@ def fetch_and_rank_players(categories, invert_categories=None, min_gp=10, punt_c
 
     # Standardize fantasy stats only (not GP)
     standardized_stats = (numeric - numeric.mean()) / numeric.std()
-
-    if invert_categories:
-        for col in invert_categories:
-            if col in standardized_stats.columns:
-                standardized_stats[col] = -standardized_stats[col]
-
-    # Merge back non-standardized fields
+    # Re-add PLAYER_NAME and GP after standardization
     standardized_stats['PLAYER_NAME'] = selected['PLAYER_NAME']
     standardized_stats['GP'] = selected['GP']
-    # Add volume columns for FG and FT
-    if 'FG_PCT' in categories:
-        standardized_stats['FGA'] = df_filtered['FGA']
-    if 'FT_PCT' in categories:
-        standardized_stats['FTA'] = df_filtered['FTA']
 
-    # Reorder columns
+    # ...existing code...
     cols = ['PLAYER_NAME', 'GP'] + [col for col in standardized_stats.columns if col not in ['PLAYER_NAME', 'GP']]
     standardized = standardized_stats[cols].copy()
 
     # Compute total score
     scoring_cols = [col for col in standardized.columns if col not in ['PLAYER_NAME', 'GP', 'FGA', 'FTA']]
     if punt_categories:
-        # If FG_PCT is punted, use only FG_PCT and weight by FGA
-        if 'FG_PCT' in punt_categories and 'FG_PCT' in scoring_cols:
-            scoring_cols = [col for col in scoring_cols if col not in ['FG_CONTRIB', 'FGM', 'FGA']]
-            standardized['FG_PCT_SCORE'] = standardized['FG_PCT'] * df_filtered['FGA']
-            scoring_cols = [col for col in scoring_cols if col != 'FG_PCT'] + ['FG_PCT_SCORE']
-        # If FT_PCT is punted, use only FT_PCT and weight by FTA
-        if 'FT_PCT' in punt_categories and 'FT_PCT' in scoring_cols:
-            scoring_cols = [col for col in scoring_cols if col not in ['FT_CONTRIB', 'FTM', 'FTA']]
-            standardized['FT_PCT_SCORE'] = standardized['FT_PCT'] * df_filtered['FTA']
-            scoring_cols = [col for col in scoring_cols if col != 'FT_PCT'] + ['FT_PCT_SCORE']
-        # Remove FG/FT made/attempted/contrib if punted
-        for cat in ['FG_PCT', 'FT_PCT']:
-            if cat in punt_categories:
-                for remove_col in ['FG_CONTRIB', 'FGM', 'FGA', 'FT_CONTRIB', 'FTM', 'FTA']:
-                    if remove_col in scoring_cols:
-                        scoring_cols.remove(remove_col)
+        # Remove FG_IMPACT if FG_PCT is punted
+        if 'FG_PCT' in punt_categories:
+            if 'FG_IMPACT' in scoring_cols:
+                scoring_cols.remove('FG_IMPACT')
+        # Remove FT_IMPACT if FT_PCT is punted
+        if 'FT_PCT' in punt_categories:
+            if 'FT_IMPACT' in scoring_cols:
+                scoring_cols.remove('FT_IMPACT')
+        # Remove any other punted categories from scoring_cols
+        for cat in punt_categories:
+            if cat not in ['FG_PCT', 'FT_PCT'] and cat in scoring_cols:
+                scoring_cols.remove(cat)
     standardized['TOTAL_Z'] = standardized[scoring_cols].sum(axis=1)
 
     gp_weight = 0.3
@@ -123,7 +107,6 @@ def simulate_draft():
     user_pick = int(data.get('user_pick'))
     num_teams = int(data.get('num_teams'))
     num_rounds = int(data.get('num_rounds'))
-
     global_ranked = fetch_and_rank_players(categories, invert, min_gp, punt_categories=None).reset_index(drop=True)
     user_ranked = fetch_and_rank_players(categories, invert, min_gp, punt_categories=punt).reset_index(drop=True)
 
@@ -163,8 +146,10 @@ def simulate_draft():
         raw_stats = raw_df[raw_df['PLAYER_NAME'] == player_name].to_dict(orient='records')[0]
         player_id = raw_stats.get('PLAYER_ID', 0)
 
-        if team_idx == user_pick - 1:
-            user_score = player['ADJUSTED_Z']
+        # Always get the score from user_ranked (punt-adjusted)
+        score_row = user_ranked[user_ranked['PLAYER_NAME'] == player_name]
+        if not score_row.empty:
+            user_score = score_row.iloc[0]['ADJUSTED_Z']
         else:
             user_score = player['ADJUSTED_Z']
 
@@ -178,26 +163,22 @@ def simulate_draft():
 
     user_team = team_rosters[user_pick - 1]
 
-    full_draft_list = []
-    for i in range(num_teams * num_rounds):
-        if i >= len(global_ranked):
-            break
-        player = global_ranked.iloc[i]
+    # Sort user_ranked by ADJUSTED_Z to reflect punted categories
+    top_draft_pool = []
+    for _, player in user_ranked.iterrows():
         raw_stats = raw_df[raw_df['PLAYER_NAME'] == player['PLAYER_NAME']].to_dict(orient='records')[0]
         player_id = raw_stats.get('PLAYER_ID', 0)
-        user_score = user_ranked[user_ranked['PLAYER_NAME'] == player['PLAYER_NAME']]['ADJUSTED_Z'].values[0]
-
-        full_draft_list.append({
+        top_draft_pool.append({
             'name': player['PLAYER_NAME'],
             'player_id': player_id,
-            'adjusted_z': round(user_score, 2),
+            'adjusted_z': round(player['ADJUSTED_Z'], 2),
             'gp': int(player['GP']),
             'stats': {k: round(v, 1) for k, v in raw_stats.items() if k not in ['PLAYER_NAME', 'PLAYER_ID']}
         })
 
     return jsonify({
         'your_team': user_team,
-        'top_draft_pool': full_draft_list
+        'top_draft_pool': top_draft_pool
     })
-# if __name__ == '__main__':
-#     app.run(debug=True)
+if __name__ == '__main__':
+    app.run(debug=True)

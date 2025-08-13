@@ -247,9 +247,16 @@
           const ftPct = stats.FTA ? (stats.FTM / stats.FTA * 100).toFixed(1) : '0.0';
           const headshotUrl = player.player_id ? `https://cdn.nba.com/headshots/nba/latest/1040x760/${player.player_id}.png` : 'https://cdn.nba.com/logos/nba/2024/primary/0.svg';
 
+          // Find player's index in top_draft_pool
+          let topDraftNum = '';
+          if (data.top_draft_pool) {
+            const poolIndex = data.top_draft_pool.findIndex(p => p.name === player.name);
+            topDraftNum = poolIndex >= 0 ? (poolIndex + 1) : '';
+          }
+
           const row = document.createElement("tr");
           row.innerHTML = `
-            <td style="font-size:1.15em;font-weight:600;">${index + 1}</td>
+            <td style="font-size:1.15em;font-weight:600;">${topDraftNum}</td>
             <td style="text-align:center;"><img src="${headshotUrl}" alt="Headshot" style="width:70px;height:70px;border-radius:50%;object-fit:cover;border:2.5px solid #6366f1;background:#e0e7ef;box-shadow:0 2px 8px #e0e7ef;"></td>
             <td style="font-size:1.12em;font-weight:600;">${player.name}</td>
             <td style="font-size:1.08em;">${player.adjusted_z}</td>

@@ -1,26 +1,19 @@
-from nba_api.stats.endpoints import leaguedashplayerstats
 import pandas as pd
 
-def fetch_nba_stats(season='2024-25', per_mode='PerGame'):
-    data = leaguedashplayerstats.LeagueDashPlayerStats(
-        season=season,
-        per_mode_detailed=per_mode
-    )
-    return data.get_data_frames()[0]
+def fetch_nba_stats(csv_path='nba_player_stats_2024.csv'):
+    """
+    Load NBA player stats from a local CSV file.
+    If the file does not exist, you can generate it separately using nba_api and save it.
+    """
+    return pd.read_csv(csv_path)
 
 def standardize_stats(df, categories, invert_categories=None, min_gp=10, punt_categories=None):
     """
-    Standardize selected player stats using Z-scores.
-
-    Parameters:
     - df: DataFrame with raw player stats
     - categories: List of stat columns to include (e.g., ['PTS', 'REB', 'AST'])
     - invert_categories: List of categories where lower is better (e.g., ['TOV'])
     - min_gp: Minimum games played to include player
     - punt_categories: Categories to exclude from TOTAL_Z
-
-    Returns:
-    - standardized DataFrame with TOTAL_Z score
     """
     # Filter out low-GP players
     df_filtered = df[df['GP'] >= min_gp]
@@ -37,6 +30,10 @@ def standardize_stats(df, categories, invert_categories=None, min_gp=10, punt_ca
         for col in invert_categories:
             if col in standardized.columns:
                 standardized[col] = -standardized[col]
+
+    # Always invert turnovers so lower is better
+    if 'TOV' in standardized.columns:
+        standardized['TOV'] = -standardized['TOV']
 
     # Add player name back
     standardized['PLAYER_NAME'] = selected['PLAYER_NAME']
@@ -60,7 +57,7 @@ categories = ['PTS', 'REB', 'AST', 'STL', 'BLK', 'FG_PCT', 'FT_PCT', 'FG3M', 'TO
 invert_cats = ['TOV']
 punt_cats = []  # e.g., ['FT_PCT'] to punt free throws
 
-raw_stats = fetch_nba_stats(season='2024-25')
+raw_stats = fetch_nba_stats(csv_path='nba_player_stats_2024.csv')
 result = standardize_stats(raw_stats, categories, invert_categories=invert_cats, min_gp=20, punt_categories=punt_cats)
 
 # Display top 10 players
