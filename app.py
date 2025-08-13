@@ -127,18 +127,13 @@ def simulate_draft():
     global_ranked = fetch_and_rank_players(categories, invert, min_gp, punt_categories=None).reset_index(drop=True)
     user_ranked = fetch_and_rank_players(categories, invert, min_gp, punt_categories=punt).reset_index(drop=True)
 
-    raw_data = leaguedashplayerstats.LeagueDashPlayerStats(season='2024-25', per_mode_detailed='PerGame')
-    raw_df = raw_data.get_data_frames()[0]
-    nba_team_ids = [1610612737, 1610612738, 1610612739, 1610612740, 1610612741, 1610612742, 1610612743, 1610612744,
-                   1610612745, 1610612746, 1610612747, 1610612748, 1610612749, 1610612750, 1610612751, 1610612752,
-                   1610612753, 1610612754, 1610612755, 1610612756, 1610612757, 1610612758, 1610612759, 1610612760,
-                   1610612761, 1610612762, 1610612763, 1610612764, 1610612765, 1610612766]
-    if 'TEAM_ID' in raw_df.columns:
-        raw_df = raw_df[raw_df['TEAM_ID'].isin(nba_team_ids)]
-    elif 'LEAGUE_ID' in raw_df.columns:
-        raw_df = raw_df[raw_df['LEAGUE_ID'] == '00']
-    # Include PLAYER_ID for headshots
-    raw_df = raw_df[['PLAYER_NAME', 'PLAYER_ID', 'PTS', 'REB', 'AST', 'STL', 'BLK', 'FGM', 'FGA', 'FTM', 'FTA', 'FG3M', 'TOV']]
+    # Load raw player data from CSV instead of NBA API
+    raw_df = pd.read_csv('nba_top100_2024.csv')
+    # If PLAYER_ID is present, keep it; otherwise, drop or fill as needed
+    columns_needed = ['PLAYER_NAME', 'PTS', 'REB', 'AST', 'STL', 'BLK', 'FGM', 'FGA', 'FTM', 'FTA', 'FG3M', 'TOV']
+    if 'PLAYER_ID' in raw_df.columns:
+        columns_needed = ['PLAYER_NAME', 'PLAYER_ID'] + columns_needed[1:]
+    raw_df = raw_df[[col for col in columns_needed if col in raw_df.columns]]
 
     draft_order = []
     for rnd in range(num_rounds):
