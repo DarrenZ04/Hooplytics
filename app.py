@@ -1,5 +1,4 @@
 from flask import Flask, request, jsonify, render_template
-from nba_api.stats.endpoints import leaguedashplayerstats
 import numpy as np
 import pandas as pd
 from datetime import datetime
@@ -7,17 +6,7 @@ from datetime import datetime
 app = Flask(__name__)
 
 def fetch_and_rank_players(categories, invert_categories=None, min_gp=10, punt_categories=None):
-    data = leaguedashplayerstats.LeagueDashPlayerStats(season='2024-25', per_mode_detailed='PerGame')
-    df = data.get_data_frames()[0]
-    # NBA team IDs for 2024–25 season
-    nba_team_ids = [1610612737, 1610612738, 1610612739, 1610612740, 1610612741, 1610612742, 1610612743, 1610612744,
-                   1610612745, 1610612746, 1610612747, 1610612748, 1610612749, 1610612750, 1610612751, 1610612752,
-                   1610612753, 1610612754, 1610612755, 1610612756, 1610612757, 1610612758, 1610612759, 1610612760,
-                   1610612761, 1610612762, 1610612763, 1610612764, 1610612765, 1610612766]
-    if 'TEAM_ID' in df.columns:
-        df = df[df['TEAM_ID'].isin(nba_team_ids)]
-    elif 'LEAGUE_ID' in df.columns:
-        df = df[df['LEAGUE_ID'] == '00']
+    df = pd.read_csv('nba_top100_2024.csv')
 
     df_filtered = df[df['GP'] >= min_gp].copy()
 
@@ -215,6 +204,3 @@ def simulate_draft():
         'your_team': user_team,
         'top_draft_pool': full_draft_list
     })
-
-if __name__ == '__main__':
-    app.run(debug=True)
