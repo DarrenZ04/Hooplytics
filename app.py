@@ -180,5 +180,3 @@ def simulate_draft():
         'your_team': user_team,
         'top_draft_pool': top_draft_pool
     })
-if __name__ == '__main__':
-    app.run(debug=True)
