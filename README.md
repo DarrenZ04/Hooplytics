@@ -11,4 +11,4 @@ Key Features:
 - Interactive web interface
 
 ## Live Demo
-Try the app here: [fantasy-draft-optimizer.vercel.app](https://fantasy-draft-optimizer.vercel.app/)
+Try the app here: [https://hooplytics.vercel.app/](https://hooplytics.vercel.app/)
