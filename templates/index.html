@@ -1,227 +1,967 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Fantasy Basketball Draft Optimizer</title>
+  <!-- Updated title to Hooplytics -->
+  <title>Hooplytics - Fantasy Basketball Draft Optimizer</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Quicksand:wght@500;700&display=swap');
+    
+    /* Chart.js styling */
+    .chart-container {
+      background: linear-gradient(135deg, #2d1b3d 0%, #4a1a4a 100%);
+      padding: 24px;
+      border-radius: 15px;
+      margin: 20px 0;
+      border: 1px solid rgba(138, 43, 226, 0.3);
+      box-shadow: 0 8px 32px rgba(138, 43, 226, 0.2);
+    }
+    
+    .chart-container h4 {
+      color: #e2e8f0;
+      margin-top: 0;
+      margin-bottom: 16px;
+      text-align: center;
+      font-size: 1.3em;
+    }
+    
+    .analytics-btn {
+      background: linear-gradient(45deg, #8a2be2, #9932cc, #ba55d3);
+      background-size: 300% 300%;
+      animation: gradientShift 3s ease infinite;
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 14px 28px;
+      font-size: 1.1em;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(138, 43, 226, 0.4);
+      margin: 0 auto;
+      display: block;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .analytics-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(138, 43, 226, 0.6);
+    }
+    
+    /* Chart responsiveness */
+    .chart-container canvas {
+      max-height: 400px;
+      min-height: 300px;
+    }
+    
+    @media (max-width: 768px) {
+      .chart-container {
+        padding: 16px;
+        margin: 16px 0;
+      }
+      
+      .chart-container canvas {
+        max-height: 300px;
+        min-height: 250px;
+      }
+    }
+    
+    * {
+      box-sizing: border-box;
+    }
+    
     body {
       font-family: 'Quicksand', 'Baloo 2', Arial, sans-serif;
-      background: linear-gradient(120deg, #f8fafc 0%, #e3e7ed 100%);
+      background: linear-gradient(135deg, #0a0a0a 0%, #1a0a1a 25%, #2d1b3d 50%, #4a1a4a 75%, #1a0a2a 100%);
+      background-size: 400% 400%;
+      animation: gradientShift 15s ease infinite;
       margin: 0;
       padding: 0;
       min-height: 100vh;
+      overflow-x: hidden;
     }
+    
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    
     .container {
       max-width: 1200px;
       margin: 32px auto;
-      background: #fff;
-      border-radius: 16px;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+      min-height: calc(100vh - 64px);
+      background: rgba(20, 20, 20, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      box-shadow: 0 8px 32px rgba(138, 43, 226, 0.3);
       padding: 32px 24px;
-      overflow-x: auto;
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid rgba(138, 43, 226, 0.2);
     }
+    
     h1 {
       text-align: center;
-      color: #2d3748;
-      margin-bottom: 24px;
-      font-size: 2.5em;
+      background: linear-gradient(45deg, #8a2be2, #9932cc, #ba55d3, #dda0dd);
+      background-size: 300% 300%;
+      animation: gradientShift 8s ease infinite;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+      font-size: 3.2em;
       letter-spacing: 1px;
       font-family: 'Baloo 2', 'Quicksand', Arial, sans-serif;
       font-weight: 700;
-      text-shadow: 0 2px 8px #e0e7ef;
+      text-shadow: 0 2px 8px rgba(138, 43, 226, 0.3);
+      position: relative;
     }
+    
+    /* Added description styling */
+    .description {
+      text-align: center;
+      color: #b8b8b8;
+      font-size: 1.2em;
+      margin-bottom: 32px;
+      font-style: italic;
+      letter-spacing: 0.5px;
+    }
+    
+    h1::before {
+      content: '🏀';
+      position: absolute;
+      left: -60px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.8em;
+      animation: bounce 2s infinite;
+    }
+    
+    h1::after {
+      content: '🏀';
+      position: absolute;
+      right: -60px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.8em;
+      animation: bounce 2s infinite 1s;
+    }
+    
+    @keyframes bounce {
+      0%, 20%, 50%, 80%, 100% { transform: translateY(-50%); }
+      40% { transform: translateY(-70%); }
+      60% { transform: translateY(-60%); }
+    }
+    
+    /* Added tab navigation styling */
+    .tab-nav {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 32px;
+      border-bottom: 2px solid rgba(138, 43, 226, 0.3);
+    }
+    
+    .tab-button {
+      background: none;
+      border: none;
+      color: #b8b8b8;
+      padding: 16px 24px;
+      font-size: 1.1em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border-bottom: 3px solid transparent;
+      font-family: 'Quicksand', Arial, sans-serif;
+      letter-spacing: 0.5px;
+      margin: 0;
+      display: block;
+      box-shadow: none;
+    }
+    
+    .tab-button:hover {
+      color: #dda0dd;
+      transform: none;
+      box-shadow: none;
+    }
+    
+    .tab-button.active {
+      color: #8a2be2;
+      border-bottom-color: #8a2be2;
+      background: linear-gradient(135deg, rgba(138, 43, 226, 0.1) 0%, rgba(186, 85, 211, 0.1) 100%);
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
     h2, h3 {
-      color: #3b4252;
+      color: #e2e8f0;
       margin-top: 24px;
       margin-bottom: 12px;
       font-family: 'Baloo 2', 'Quicksand', Arial, sans-serif;
       font-weight: 600;
       letter-spacing: 0.5px;
+      position: relative;
+      padding-left: 20px;
     }
+    
+    h2::before, h3::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 4px;
+      height: 20px;
+      background: linear-gradient(45deg, #8a2be2, #9932cc);
+      border-radius: 2px;
+    }
+    
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    
+    .input-group {
+      background: linear-gradient(135deg, #2d1b3d 0%, #4a1a4a 100%);
+      padding: 16px;
+      border-radius: 12px;
+      color: white;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      border: 1px solid rgba(138, 43, 226, 0.3);
+    }
+    
+    .input-group:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(138, 43, 226, 0.4);
+    }
+    
     label {
       font-size: 1.08em;
-      color: #444;
+      color: inherit;
       margin-bottom: 8px;
       display: block;
       font-family: 'Quicksand', 'Baloo 2', Arial, sans-serif;
-      font-weight: 500;
+      font-weight: 600;
       letter-spacing: 0.5px;
     }
+    
     input[type="number"] {
-      padding: 6px 10px;
-      border-radius: 6px;
-      border: 1px solid #cbd5e1;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: none;
       margin-left: 8px;
       margin-bottom: 10px;
       width: 80px;
       font-size: 1em;
-      background: #f8fafc;
-      transition: border 0.2s;
+      background: rgba(20, 20, 20, 0.95);
+      color: white;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
+    
     input[type="number"]:focus {
-      border: 1.5px solid #4f46e5;
+      background: rgba(20, 20, 20, 1);
+      box-shadow: 0 4px 15px rgba(138, 43, 226, 0.4);
       outline: none;
+      transform: scale(1.05);
     }
+    
+    .punt-section {
+      background: linear-gradient(135deg, #4a1a4a 0%, #6a1a6a 100%);
+      padding: 20px;
+      border-radius: 15px;
+      margin: 20px 0;
+      border: 1px solid rgba(138, 43, 226, 0.4);
+    }
+    
+    .punt-section h3 {
+      color: white;
+      margin-top: 0;
+    }
+    
+    .punt-section h3::before {
+      background: white;
+    }
+    
+    #punt_categories {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+      gap: 12px;
+    }
+    
     #punt_categories label {
-      display: inline-block;
-      margin-right: 18px;
-      margin-bottom: 8px;
-      font-size: 0.98em;
-      background: #f3f4f6;
-      border-radius: 6px;
-      padding: 4px 10px;
-      transition: background 0.2s;
+      display: flex;
+      align-items: center;
+      margin: 0;
+      font-size: 0.85em;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 6px 8px;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      backdrop-filter: blur(5px);
+      border: 1px solid rgba(138, 43, 226, 0.3);
     }
+    
     #punt_categories label:hover {
-      background: #e0e7ef;
+      background: rgba(138, 43, 226, 0.2);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(138, 43, 226, 0.3);
     }
+    
+    #punt_categories input[type="checkbox"] {
+      margin-right: 8px;
+      margin-left: 0;
+      width: auto;
+      transform: scale(1.2);
+    }
+    
     button {
-      background: linear-gradient(90deg, #6366f1 0%, #60a5fa 100%);
+      background: linear-gradient(45deg, #8a2be2, #9932cc, #ba55d3);
+      background-size: 300% 300%;
+      animation: gradientShift 3s ease infinite;
       color: #fff;
       border: none;
-      border-radius: 8px;
-      padding: 10px 22px;
-      font-size: 1.08em;
-      font-weight: 500;
+      border-radius: 12px;
+      padding: 14px 28px;
+      font-size: 1.2em;
+      font-weight: 600;
       cursor: pointer;
-      box-shadow: 0 2px 8px rgba(99,102,241,0.08);
-      margin-top: 16px;
-      margin-bottom: 24px;
-      transition: background 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 15px rgba(138, 43, 226, 0.4);
+      margin: 20px auto;
+      display: block;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
     }
+    
+    button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      transition: left 0.5s;
+    }
+    
+    button:hover::before {
+      left: 100%;
+    }
+    
     button:hover {
-      background: linear-gradient(90deg, #4338ca 0%, #2563eb 100%);
-      box-shadow: 0 4px 16px rgba(99,102,241,0.12);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(138, 43, 226, 0.6);
     }
+    
+    button:active {
+      transform: translateY(-1px);
+    }
+    
+    .loading-spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 1s ease-in-out infinite;
+      margin-right: 10px;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
     table {
       border-collapse: separate;
       border-spacing: 0;
       width: 100%;
-      min-width: 1100px;
-      margin-top: 10px;
-      background: #f8fafc;
-      border-radius: 12px;
+      margin-top: 20px;
+      background: linear-gradient(135deg, rgba(30,30,30,0.95) 0%, rgba(45,27,61,0.95) 100%);
+      border-radius: 15px;
       overflow: hidden;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+      box-shadow: 0 8px 32px rgba(138, 43, 226, 0.2);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(138, 43, 226, 0.2);
     }
+    
     th, td {
-      border-bottom: 1px solid #e5e7eb;
-      padding: 14px 10px;
+      border-bottom: 1px solid rgba(138, 43, 226, 0.2);
+      padding: 16px 12px;
       text-align: left;
-      font-size: 19px;
+      font-size: 14px;
       vertical-align: middle;
     }
+    
     th {
-      background-color: #e0e7ef;
-      color: #374151;
+      background: linear-gradient(135deg, #2d1b3d 0%, #4a1a4a 100%);
+      color: white;
       font-weight: 600;
       letter-spacing: 0.5px;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.3);
     }
+    
     tr:last-child td {
       border-bottom: none;
     }
-    tbody tr:hover {
-      background: #e0e7ef;
-      transition: background 0.2s;
+    
+    tbody tr {
+      transition: all 0.3s ease;
     }
-    @media (max-width: 700px) {
+    
+    tbody tr:hover {
+      background: linear-gradient(135deg, rgba(138, 43, 226, 0.1) 0%, rgba(186, 85, 211, 0.1) 100%);
+      transform: scale(1.01);
+      box-shadow: 0 4px 15px rgba(138, 43, 226, 0.2);
+    }
+    
+    .player-headshot {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid transparent;
+      background: linear-gradient(45deg, #8a2be2, #9932cc, #ba55d3, #dda0dd);
+      background-clip: padding-box;
+      box-shadow: 0 4px 15px rgba(138, 43, 226, 0.3);
+      transition: all 0.3s ease;
+    }
+    
+    .player-headshot:hover {
+      transform: scale(1.1) rotate(5deg);
+      box-shadow: 0 8px 25px rgba(138, 43, 226, 0.5);
+    }
+    
+    .stat-cell {
+      font-weight: 600;
+      color: #e2e8f0;
+    }
+    
+    .score-cell {
+      background: linear-gradient(45deg, #8a2be2, #ba55d3);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      font-weight: 700;
+      font-size: 1.1em;
+    }
+    
+    /* Added placeholder styling for analytics tab */
+    .analytics-placeholder {
+      text-align: center;
+      padding: 60px 20px;
+      background: linear-gradient(135deg, #2d1b3d 0%, #4a1a4a 100%);
+      border-radius: 15px;
+      border: 1px solid rgba(138, 43, 226, 0.3);
+      margin: 20px 0;
+    }
+    
+    .analytics-placeholder h3 {
+      color: #8a2be2;
+      font-size: 1.8em;
+      margin-bottom: 16px;
+      padding-left: 0;
+    }
+    
+    .analytics-placeholder h3::before {
+      display: none;
+    }
+    
+    .analytics-placeholder p {
+      color: #b8b8b8;
+      font-size: 1.1em;
+      line-height: 1.6;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    
+    @media (max-width: 768px) {
       .container {
-        padding: 12px 4px;
+        margin: 16px 8px;
+        padding: 20px 12px;
       }
-      table, th, td {
-        font-size: 13px;
-      }
+      
       h1 {
-        font-size: 1.3em;
+        font-size: 2em;
+      }
+      
+      h1::before, h1::after {
+        display: none;
+      }
+      
+      /* Added mobile tab styling */
+      .tab-nav {
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      
+      .tab-button {
+        font-size: 0.95em;
+        padding: 12px 16px;
+      }
+      
+      .settings-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      #punt_categories {
+        grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+      }
+      
+      table, th, td {
+        font-size: 12px;
+      }
+      
+      .player-headshot {
+        width: 40px;
+        height: 40px;
       }
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Fantasy Basketball Draft Optimizer (2024–25)</h1>
+    <!-- Updated title to Hooplytics and added description -->
+    <h1>Hooplytics</h1>
+    <p class="description">Advanced Fantasy Basketball Draft Optimizer</p>
 
-    <h2>Simulate Draft</h2>
-    <label># of Teams: <input type="number" id="num_teams" value="10"></label>
-    <label># of Rounds: <input type="number" id="num_rounds" value="13"></label>
-    <label>Your Draft Position (1-based): <input type="number" id="your_pick" value="1"></label>
-
-    <h3>Punt Categories</h3>
-    <div id="punt_categories">
-      <label><input type="checkbox" value="PTS"> Points</label>
-      <label><input type="checkbox" value="REB"> Rebounds</label>
-      <label><input type="checkbox" value="AST"> Assists</label>
-      <label><input type="checkbox" value="STL"> Steals</label>
-      <label><input type="checkbox" value="BLK"> Blocks</label>
-      <label><input type="checkbox" value="FG_PCT"> FG%</label>
-      <label><input type="checkbox" value="FT_PCT"> FT%</label>
-      <label><input type="checkbox" value="FG3M"> 3PM</label>
-      <label><input type="checkbox" value="TOV"> Turnovers</label>
+    <!-- Added tab navigation -->
+    <div class="tab-nav">
+      <button class="tab-button active" onclick="switchTab('settings')">⚙️ Draft Settings</button>
+      <button class="tab-button" onclick="switchTab('your-team')">👥 Your Team</button>
+      <button class="tab-button" onclick="switchTab('draft-pool')">🏆 Draft Pool</button>
+      <button class="tab-button" onclick="switchTab('analytics')">📊 Player Analytics</button>
     </div>
 
-    <button onclick="simulateDraft()">Simulate Draft</button>
+    <!-- Wrapped settings in tab content -->
+    <div id="settings-tab" class="tab-content active">
+      <h2>🎯 Simulate Draft</h2>
+      <div class="settings-grid">
+        <div class="input-group">
+          <label>👥 # of Teams: <input type="number" id="num_teams" value="10"></label>
+        </div>
+        <div class="input-group">
+          <label>🔄 # of Rounds: <input type="number" id="num_rounds" value="13"></label>
+        </div>
+        <div class="input-group">
+          <label>📍 Your Draft Position: <input type="number" id="your_pick" value="1"></label>
+        </div>
+      </div>
 
-    <h3>Your Team</h3>
-    <table id="your_team_table">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Headshot</th>
-          <th>Player</th>
-          <th>Score</th>
-          <th>GP</th>
-          <th>PTS</th>
-          <th>REB</th>
-          <th>AST</th>
-          <th>STL</th>
-          <th>BLK</th>
-          <th>FG</th>
-          <th>FT</th>
-          <th>3PM</th>
-          <th>TOV</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+      <div class="punt-section">
+        <h3>🚫 Punt Categories</h3>
+        <div id="punt_categories">
+          <label><input type="checkbox" value="PTS"> 🏀 Points</label>
+          <label><input type="checkbox" value="REB"> 🔄 Rebounds</label>
+          <label><input type="checkbox" value="AST"> 🤝 Assists</label>
+          <label><input type="checkbox" value="STL"> 🦹 Steals</label>
+          <label><input type="checkbox" value="BLK"> 🛡️ Blocks</label>
+          <label><input type="checkbox" value="FG_PCT"> 🎯 FG%</label>
+          <label><input type="checkbox" value="FT_PCT"> 🆓 FT%</label>
+          <label><input type="checkbox" value="FG3M"> 🏹 3PM</label>
+          <label><input type="checkbox" value="TOV"> ❌ Turnovers</label>
+        </div>
+      </div>
 
-    <h3>Top Draft Pool</h3>
-    <table id="draft_pool_table">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Headshot</th>
-          <th>Player</th>
-          <th>Score</th>
-          <th>GP</th>
-          <th>PTS</th>
-          <th>REB</th>
-          <th>AST</th>
-          <th>STL</th>
-          <th>BLK</th>
-          <th>FG</th>
-          <th>FT</th>
-          <th>3PM</th>
-          <th>TOV</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+      <button onclick="simulateDraft()" id="simulate-btn">
+        🚀 Simulate Draft
+      </button>
+    </div>
+
+    <!-- Moved your team to separate tab -->
+    <div id="your-team-tab" class="tab-content">
+      <h3>⭐ Your Recommended Team</h3>
+      <table id="your_team_table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>📸</th>
+            <th>Player</th>
+            <th>Score</th>
+            <th>GP</th>
+            <th>PTS</th>
+            <th>REB</th>
+            <th>AST</th>
+            <th>STL</th>
+            <th>BLK</th>
+            <th>FG</th>
+            <th>FT</th>
+            <th>3PM</th>
+            <th>TOV</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="14" style="text-align:center;font-size:1.2em;padding:40px;color:#b8b8b8;">Run a draft simulation to see your recommended team</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Moved draft pool to separate tab -->
+    <div id="draft-pool-tab" class="tab-content">
+      <h3>🏆 Top Draft Pool</h3>
+      <table id="draft_pool_table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>📸</th>
+            <th>Player</th>
+            <th>Score</th>
+            <th>GP</th>
+            <th>PTS</th>
+            <th>REB</th>
+            <th>AST</th>
+            <th>STL</th>
+            <th>BLK</th>
+            <th>FG</th>
+            <th>FT</th>
+            <th>3PM</th>
+            <th>TOV</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="14" style="text-align:center;font-size:1.2em;padding:40px;color:#b8b8b8;">Run a draft simulation to see the top draft pool</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Added new analytics tab -->
+    <div id="analytics-tab" class="tab-content">
+      <h3>📊 Player Analytics Dashboard</h3>
+      <p style="text-align: center; color: #b8b8b8; margin-bottom: 24px;">Compare your team's players to league averages across all statistical categories</p>
+      
+      <div id="analytics-controls" style="text-align: center; margin-bottom: 24px; display: none;">
+        <button onclick="loadTeamAnalytics()" class="analytics-btn">
+          📊 Load Team Analytics
+        </button>
+      </div>
+      
+      <div id="analytics-content" style="display: none;">
+        <div class="chart-container">
+          <h4>🏀 Team vs League Averages</h4>
+          <canvas id="teamComparisonChart" width="400" height="200"></canvas>
+        </div>
+        
+        
+        
+        <div class="chart-container">
+          <h4>🎯 Category Breakdown</h4>
+          <canvas id="categoryBreakdownChart" width="400" height="200"></canvas>
+        </div>
+      </div>
+      
+      <div id="analytics-placeholder" class="analytics-placeholder">
+        <h3>📊 Player Analytics Dashboard</h3>
+        <p>Interactive graphs showing how your team's players compare to league averages across all statistical categories. Run a draft simulation first to see your team's analytics.</p>
+      </div>
+    </div>
   </div>
 
+  <!-- Chart.js Library -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
   <script>
+         // Global variables for charts
+     let teamComparisonChart = null;
+     let categoryBreakdownChart = null;
+    
+    function switchTab(tabName) {
+      // Hide all tab contents
+      const tabContents = document.querySelectorAll('.tab-content');
+      tabContents.forEach(tab => tab.classList.remove('active'));
+      
+      // Remove active class from all tab buttons
+      const tabButtons = document.querySelectorAll('.tab-button');
+      tabButtons.forEach(button => button.classList.remove('active'));
+      
+      // Show selected tab content
+      document.getElementById(tabName + '-tab').classList.add('active');
+      
+      // Add active class to clicked button
+      event.target.classList.add('active');
+      
+      // If switching to analytics tab, check if we have team data
+      if (tabName === 'analytics') {
+        checkAnalyticsAvailability();
+      }
+    }
+    
+    function checkAnalyticsAvailability() {
+      const yourTeamTable = document.getElementById('your_team_table');
+      const hasTeamData = yourTeamTable.querySelector('tbody tr').textContent !== 'Run a draft simulation to see your recommended team';
+      
+      if (hasTeamData) {
+        document.getElementById('analytics-controls').style.display = 'block';
+        document.getElementById('analytics-placeholder').style.display = 'none';
+      } else {
+        document.getElementById('analytics-controls').style.display = 'none';
+        document.getElementById('analytics-placeholder').style.display = 'block';
+      }
+    }
+    
+    function loadTeamAnalytics() {
+      const button = document.querySelector('.analytics-btn');
+      button.innerHTML = '<span class="loading-spinner"></span>📊 Loading Analytics...';
+      button.disabled = true;
+      
+      // Get current draft settings
+      const numTeams = parseInt(document.getElementById("num_teams").value);
+      const numRounds = parseInt(document.getElementById("num_rounds").value);
+      const yourPick = parseInt(document.getElementById("your_pick").value);
+      const puntChecks = document.querySelectorAll("#punt_categories input[type=checkbox]:checked");
+      const puntCategories = Array.from(puntChecks).map(cb => cb.value);
+      
+      fetch('/team_analytics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          categories: ['PTS', 'REB', 'AST', 'STL', 'BLK', 'FG_PCT', 'FT_PCT', 'FG3M', 'TOV'],
+          invert: ['TOV'],
+          punt: puntCategories,
+          min_gp: 20,
+          user_pick: yourPick,
+          num_teams: numTeams,
+          num_rounds: numRounds
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        button.innerHTML = '📊 Load Team Analytics';
+        button.disabled = false;
+        
+        document.getElementById('analytics-content').style.display = 'block';
+        document.getElementById('analytics-placeholder').style.display = 'none';
+        
+                 createTeamComparisonChart(data);
+         createCategoryBreakdownChart(data);
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        button.innerHTML = '📊 Load Team Analytics';
+        button.disabled = false;
+        alert('Error loading team analytics. Please try again.');
+      });
+    }
+    
+    function createTeamComparisonChart(data) {
+      const ctx = document.getElementById('teamComparisonChart').getContext('2d');
+      
+      // Destroy existing chart if it exists
+      if (teamComparisonChart) {
+        teamComparisonChart.destroy();
+      }
+      
+      const categories = data.stat_categories;
+      const teamAverages = calculateTeamAverages(data.team_data, categories);
+      const leagueAverages = data.league_averages;
+      
+      teamComparisonChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: categories,
+          datasets: [
+            {
+              label: 'Your Team Average',
+              data: categories.map(cat => teamAverages[cat] || 0),
+              backgroundColor: 'rgba(138, 43, 226, 0.8)',
+              borderColor: 'rgba(138, 43, 226, 1)',
+              borderWidth: 2
+            },
+            {
+              label: 'League Average',
+              data: categories.map(cat => leagueAverages[cat] || 0),
+              backgroundColor: 'rgba(186, 85, 211, 0.6)',
+              borderColor: 'rgba(186, 85, 211, 1)',
+              borderWidth: 2
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: 'Team vs League Averages',
+              color: '#e2e8f0',
+              font: { size: 16, weight: 'bold' }
+            },
+            legend: {
+              labels: { color: '#e2e8f0' }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: { color: 'rgba(138, 43, 226, 0.2)' },
+              ticks: { color: '#e2e8f0' }
+            },
+            x: {
+              grid: { color: 'rgba(138, 43, 226, 0.2)' },
+              ticks: { color: '#e2e8f0' }
+            }
+          }
+        }
+      });
+    }
+    
+
+    
+    function createCategoryBreakdownChart(data) {
+      const ctx = document.getElementById('categoryBreakdownChart').getContext('2d');
+      
+      // Destroy existing chart if it exists
+      if (categoryBreakdownChart) {
+        categoryBreakdownChart.destroy();
+      }
+      
+      const categories = data.stat_categories;
+      const teamAverages = calculateTeamAverages(data.team_data, categories);
+      const leagueAverages = data.league_averages;
+      
+      // Calculate percentage differences
+      const percentageDifferences = categories.map(cat => {
+        const teamAvg = teamAverages[cat] || 0;
+        const leagueAvg = leagueAverages[cat] || 0;
+        if (leagueAvg === 0) return 0;
+        return ((teamAvg - leagueAvg) / leagueAvg) * 100;
+      });
+      
+      categoryBreakdownChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: categories,
+          datasets: [{
+            label: 'Team vs League (%)',
+            data: percentageDifferences,
+            backgroundColor: percentageDifferences.map(val => 
+              val > 0 ? 'rgba(76, 175, 80, 0.8)' : 'rgba(244, 67, 54, 0.8)'
+            ),
+            borderColor: percentageDifferences.map(val => 
+              val > 0 ? 'rgba(76, 175, 80, 1)' : 'rgba(244, 67, 54, 1)'
+            ),
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: 'Category Performance vs League Average',
+              color: '#e2e8f0',
+              font: { size: 16, weight: 'bold' }
+            },
+            legend: {
+              labels: { color: '#e2e8f0' }
+            }
+          },
+          scales: {
+            y: {
+              grid: { color: 'rgba(138, 43, 226, 0.2)' },
+              ticks: { color: '#e2e8f0' }
+            },
+            x: {
+              grid: { color: 'rgba(138, 43, 226, 0.2)' },
+              ticks: { color: '#e2e8f0' }
+            }
+          }
+        }
+      });
+    }
+    
+    function calculateTeamAverages(teamData, categories) {
+      const averages = {};
+      
+      categories.forEach(category => {
+        const values = teamData
+          .map(player => player.stats[category])
+          .filter(val => val !== undefined && val !== null);
+        
+        if (values.length > 0) {
+          averages[category] = values.reduce((sum, val) => sum + val, 0) / values.length;
+        } else {
+          averages[category] = 0;
+        }
+      });
+      
+      return averages;
+    }
+
+    function validateInputs() {
+      const numTeams = parseInt(document.getElementById("num_teams").value);
+      const numRounds = parseInt(document.getElementById("num_rounds").value);
+      const yourPick = parseInt(document.getElementById("your_pick").value);
+      
+      if (numTeams < 1) {
+        document.getElementById("num_teams").value = 1;
+        return false;
+      }
+      
+      if (yourPick < 1 || yourPick > numTeams) {
+        document.getElementById("your_pick").value = Math.max(1, Math.min(numTeams, yourPick));
+        return false;
+      }
+      
+      return true;
+    }
+    
+    document.getElementById("num_teams").addEventListener('input', function() {
+      const numTeams = parseInt(this.value);
+      const yourPick = parseInt(document.getElementById("your_pick").value);
+      
+      if (numTeams < 1) {
+        this.value = 1;
+      }
+      
+      const positionInput = document.getElementById("your_pick");
+      if (yourPick > numTeams) {
+        positionInput.value = numTeams;
+      }
+      positionInput.max = numTeams;
+    });
+    
+    document.getElementById("your_pick").addEventListener('input', function() {
+      const numTeams = parseInt(document.getElementById("num_teams").value);
+      const yourPick = parseInt(this.value);
+      
+      if (yourPick < 1) {
+        this.value = 1;
+      } else if (yourPick > numTeams) {
+        this.value = numTeams;
+      }
+    });
+
     function simulateDraft() {
-      const numTeams = document.getElementById("num_teams").value;
-      const numRounds = document.getElementById("num_rounds").value;
-      const yourPick = document.getElementById("your_pick").value;
+      if (!validateInputs()) {
+        return;
+      }
+      
+      const numTeams = parseInt(document.getElementById("num_teams").value);
+      const numRounds = parseInt(document.getElementById("num_rounds").value);
+      const yourPick = parseInt(document.getElementById("your_pick").value);
+      const button = document.getElementById("simulate-btn");
 
       const puntChecks = document.querySelectorAll("#punt_categories input[type=checkbox]:checked");
       const puntCategories = Array.from(puntChecks).map(cb => cb.value);
 
-      // Show loading spinner and clear tables before fetching
+      button.innerHTML = '<span class="loading-spinner"></span>🔄 Simulating...';
+      button.disabled = true;
+
       const yourTeamBody = document.querySelector("#your_team_table tbody");
       const draftPoolBody = document.querySelector("#draft_pool_table tbody");
-      yourTeamBody.innerHTML = '<tr><td colspan="14" style="text-align:center;font-size:1.2em;padding:32px;">Loading...</td></tr>';
-      draftPoolBody.innerHTML = '<tr><td colspan="14" style="text-align:center;font-size:1.2em;padding:32px;">Loading...</td></tr>';
+      yourTeamBody.innerHTML = '<tr><td colspan="14" style="text-align:center;font-size:1.2em;padding:40px;"><span class="loading-spinner"></span>Loading your dream team...</td></tr>';
+      draftPoolBody.innerHTML = '<tr><td colspan="14" style="text-align:center;font-size:1.2em;padding:40px;"><span class="loading-spinner"></span>Analyzing draft pool...</td></tr>';
 
       fetch('/simulate_draft', {
         method: 'POST',
@@ -238,6 +978,9 @@
       })
       .then(res => res.json())
       .then(data => {
+        button.innerHTML = '🚀 Simulate Draft';
+        button.disabled = false;
+        
         yourTeamBody.innerHTML = '';
         draftPoolBody.innerHTML = '';
 
@@ -247,7 +990,6 @@
           const ftPct = stats.FTA ? (stats.FTM / stats.FTA * 100).toFixed(1) : '0.0';
           const headshotUrl = player.player_id ? `https://cdn.nba.com/headshots/nba/latest/1040x760/${player.player_id}.png` : 'https://cdn.nba.com/logos/nba/2024/primary/0.svg';
 
-          // Find player's index in top_draft_pool
           let topDraftNum = '';
           if (data.top_draft_pool) {
             const poolIndex = data.top_draft_pool.findIndex(p => p.name === player.name);
@@ -256,25 +998,28 @@
 
           const row = document.createElement("tr");
           row.innerHTML = `
-            <td style="font-size:1.15em;font-weight:600;">${topDraftNum}</td>
-            <td style="text-align:center;"><img src="${headshotUrl}" alt="Headshot" style="width:70px;height:70px;border-radius:50%;object-fit:cover;border:2.5px solid #6366f1;background:#e0e7ef;box-shadow:0 2px 8px #e0e7ef;"></td>
-            <td style="font-size:1.12em;font-weight:600;">${player.name}</td>
-            <td style="font-size:1.08em;">${player.adjusted_z}</td>
-            <td>${player.gp}</td>
-            <td>${stats.PTS}</td>
-            <td>${stats.REB}</td>
-            <td>${stats.AST}</td>
-            <td>${stats.STL}</td>
-            <td>${stats.BLK}</td>
-            <td>${stats.FGM}/${stats.FGA} (${fgPct}%)</td>
-            <td>${stats.FTM}/${stats.FTA} (${ftPct}%)</td>
-            <td>${stats.FG3M}</td>
-            <td>${stats.TOV}</td>
+            <td style="font-size:1.15em;font-weight:600;" class="stat-cell">${topDraftNum}</td>
+            <td style="text-align:center;"><img src="${headshotUrl}" alt="Headshot" class="player-headshot"></td>
+            <td style="font-size:1.12em;font-weight:600;" class="stat-cell">${player.name}</td>
+            <td class="score-cell">${player.adjusted_z}</td>
+            <td class="stat-cell">${player.gp}</td>
+            <td class="stat-cell">${stats.PTS}</td>
+            <td class="stat-cell">${stats.REB}</td>
+            <td class="stat-cell">${stats.AST}</td>
+            <td class="stat-cell">${stats.STL}</td>
+            <td class="stat-cell">${stats.BLK}</td>
+            <td class="stat-cell">${stats.FGM}/${stats.FGA} (${fgPct}%)</td>
+            <td class="stat-cell">${stats.FTM}/${stats.FTA} (${ftPct}%)</td>
+            <td class="stat-cell">${stats.FG3M}</td>
+            <td class="stat-cell">${stats.TOV}</td>
           `;
           yourTeamBody.appendChild(row);
         });
 
-        data.top_draft_pool.forEach((player, index) => {
+        const maxPlayersToShow = numTeams * numRounds;
+        const playersToShow = data.top_draft_pool.slice(0, maxPlayersToShow);
+        
+        playersToShow.forEach((player, index) => {
           const stats = player.stats;
           const fgPct = stats.FGA ? (stats.FGM / stats.FGA * 100).toFixed(1) : '0.0';
           const ftPct = stats.FTA ? (stats.FTM / stats.FTA * 100).toFixed(1) : '0.0';
@@ -282,25 +1027,35 @@
 
           const row = document.createElement("tr");
           row.innerHTML = `
-            <td style="font-size:1.15em;font-weight:600;">${index + 1}</td>
-            <td style="text-align:center;"><img src="${headshotUrl}" alt="Headshot" style="width:70px;height:70px;border-radius:50%;object-fit:cover;border:2.5px solid #6366f1;background:#e0e7ef;box-shadow:0 2px 8px #e0e7ef;"></td>
-            <td style="font-size:1.12em;font-weight:600;">${player.name}</td>
-            <td style="font-size:1.08em;">${player.adjusted_z}</td>
-            <td>${player.gp}</td>
-            <td>${stats.PTS}</td>
-            <td>${stats.REB}</td>
-            <td>${stats.AST}</td>
-            <td>${stats.STL}</td>
-            <td>${stats.BLK}</td>
-            <td>${stats.FGM}/${stats.FGA} (${fgPct}%)</td>
-            <td>${stats.FTM}/${stats.FTA} (${ftPct}%)</td>
-            <td>${stats.FG3M}</td>
-            <td>${stats.TOV}</td>
+            <td style="font-size:1.15em;font-weight:600;" class="stat-cell">${index + 1}</td>
+            <td style="text-align:center;"><img src="${headshotUrl}" alt="Headshot" class="player-headshot"></td>
+            <td style="font-size:1.12em;font-weight:600;" class="stat-cell">${player.name}</td>
+            <td class="score-cell">${player.adjusted_z}</td>
+            <td class="stat-cell">${player.gp}</td>
+            <td class="stat-cell">${stats.PTS}</td>
+            <td class="stat-cell">${stats.REB}</td>
+            <td class="stat-cell">${stats.AST}</td>
+            <td class="stat-cell">${stats.STL}</td>
+            <td class="stat-cell">${stats.BLK}</td>
+            <td class="stat-cell">${stats.FGM}/${stats.FGA} (${fgPct}%)</td>
+            <td class="stat-cell">${stats.FTM}/${stats.FTA} (${ftPct}%)</td>
+            <td class="stat-cell">${stats.FG3M}</td>
+            <td class="stat-cell">${stats.TOV}</td>
           `;
-          draftPoolBody.appendChild(row);
-        });
+                  draftPoolBody.appendChild(row);
       });
-    }
+      
+      // Check if analytics tab should be available
+      checkAnalyticsAvailability();
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      button.innerHTML = '🚀 Simulate Draft';
+      button.disabled = false;
+      yourTeamBody.innerHTML = '<tr><td colspan="14" style="text-align:center;font-size:1.2em;padding:32px;color:#ff6b6b;">❌ Error loading data. Please try again.</td></tr>';
+      draftPoolBody.innerHTML = '<tr><td colspan="14" style="text-align:center;font-size:1.2em;padding:32px;color:#ff6b6b;">❌ Error loading data. Please try again.</td></tr>';
+    });
+  }
   </script>
 </body>
 </html>

@@ -180,3 +180,115 @@ def simulate_draft():
         'your_team': user_team,
         'top_draft_pool': top_draft_pool
     })
+
+@app.route('/team_analytics', methods=['POST'])
+def team_analytics():
+    data = request.json
+    categories = data.get('categories', [])
+    invert = data.get('invert', [])
+    punt = data.get('punt', [])
+    min_gp = int(data.get('min_gp', 20))
+    user_pick = int(data.get('user_pick'))
+    num_teams = int(data.get('num_teams'))
+    num_rounds = int(data.get('num_rounds'))
+    
+    # Get the user's team from the draft simulation
+    global_ranked = fetch_and_rank_players(categories, invert, min_gp, punt_categories=None).reset_index(drop=True)
+    user_ranked = fetch_and_rank_players(categories, invert, min_gp, punt_categories=punt).reset_index(drop=True)
+    
+    # Load raw player data
+    raw_df = pd.read_csv('nba_top100_2024.csv')
+    columns_needed = ['PLAYER_NAME', 'PTS', 'REB', 'AST', 'STL', 'BLK', 'FGM', 'FGA', 'FTM', 'FTA', 'FG3M', 'TOV']
+    if 'PLAYER_ID' in raw_df.columns:
+        columns_needed = ['PLAYER_NAME', 'PLAYER_ID'] + columns_needed[1:]
+    raw_df = raw_df[[col for col in columns_needed if col in raw_df.columns]]
+    
+    # Simulate draft to get user's team
+    draft_order = []
+    for rnd in range(num_rounds):
+        order = list(range(num_teams))
+        draft_order += order if rnd % 2 == 0 else order[::-1]
+    
+    team_rosters = {i: [] for i in range(num_teams)}
+    drafted_players = set()
+    
+    for pick_num in range(num_rounds * num_teams):
+        team_idx = draft_order[pick_num]
+        if team_idx == user_pick - 1:
+            available_user = user_ranked[~user_ranked['PLAYER_NAME'].isin(drafted_players)]
+            if available_user.empty:
+                continue
+            player = available_user.iloc[0]
+        else:
+            available_global = global_ranked[~global_ranked['PLAYER_NAME'].isin(drafted_players)]
+            if available_global.empty:
+                continue
+            player = available_global.iloc[0]
+        player_name = player['PLAYER_NAME']
+        drafted_players.add(player_name)
+        
+        raw_stats = raw_df[raw_df['PLAYER_NAME'] == player_name].to_dict(orient='records')[0]
+        player_id = raw_stats.get('PLAYER_ID', 0)
+        
+        score_row = user_ranked[user_ranked['PLAYER_NAME'] == player_name]
+        if not score_row.empty:
+            user_score = score_row.iloc[0]['ADJUSTED_Z']
+        else:
+            user_score = player['ADJUSTED_Z']
+        
+        team_rosters[team_idx].append({
+            'name': player_name,
+            'player_id': player_id,
+            'adjusted_z': round(user_score, 2),
+            'gp': int(player['GP']),
+            'stats': {k: round(v, 1) for k, v in raw_stats.items() if k not in ['PLAYER_NAME', 'PLAYER_ID']}
+        })
+    
+    user_team = team_rosters[user_pick - 1]
+    
+    # Calculate league averages for each stat category
+    league_averages = {}
+    stat_categories = ['PTS', 'REB', 'AST', 'STL', 'BLK', 'FG3M', 'TOV']
+    
+    for category in stat_categories:
+        if category in raw_df.columns:
+            league_averages[category] = round(raw_df[category].mean(), 2)
+    
+    # Calculate FG% and FT% averages
+    if 'FGM' in raw_df.columns and 'FGA' in raw_df.columns:
+        league_averages['FG_PCT'] = round((raw_df['FGM'].sum() / raw_df['FGA'].sum()) * 100, 1)
+    if 'FTM' in raw_df.columns and 'FTA' in raw_df.columns:
+        league_averages['FT_PCT'] = round((raw_df['FTM'].sum() / raw_df['FTA'].sum()) * 100, 1)
+    
+    # Prepare team data for charts
+    team_data = []
+    for player in user_team:
+        player_stats = player['stats']
+        player_data = {
+            'name': player['name'],
+            'player_id': player['player_id'],
+            'stats': {}
+        }
+        
+        # Add raw stats
+        for category in stat_categories:
+            if category in player_stats:
+                player_data['stats'][category] = player_stats[category]
+        
+        # Add percentage stats
+        if 'FGM' in player_stats and 'FGA' in player_stats and player_stats['FGA'] > 0:
+            player_data['stats']['FG_PCT'] = round((player_stats['FGM'] / player_stats['FGA']) * 100, 1)
+        if 'FTM' in player_stats and 'FTA' in player_stats and player_stats['FTA'] > 0:
+            player_data['stats']['FT_PCT'] = round((player_stats['FTM'] / player_stats['FTA']) * 100, 1)
+        
+        team_data.append(player_data)
+    
+    return jsonify({
+        'team_data': team_data,
+        'league_averages': league_averages,
+        'stat_categories': stat_categories + ['FG_PCT', 'FT_PCT']
+    })
+
+if __name__ == '__main__':
+    app.run(debug=True)
+    
