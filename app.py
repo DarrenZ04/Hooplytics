@@ -81,7 +81,7 @@ def fetch_and_rank_players(categories, invert_categories=None, min_gp=10, punt_c
                 scoring_cols.remove(cat)
     standardized['TOTAL_Z'] = standardized[scoring_cols].sum(axis=1)
 
-    gp_weight = 0.3
+    gp_weight = 0.15
     standardized['ADJUSTED_Z'] = standardized['TOTAL_Z'] * np.power(standardized['GP'] / standardized['GP'].max(), gp_weight)
 
     # Apply injury penalty to ADJUSTED_Z
