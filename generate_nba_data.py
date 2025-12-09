@@ -3,7 +3,7 @@ from nba_api.stats.endpoints import leaguedashplayerstats
 from pathlib import Path
 
 # Fetch NBA player stats for 2024-25 season
-stats = leaguedashplayerstats.LeagueDashPlayerStats(season='2024-25', per_mode_detailed='PerGame')
+stats = leaguedashplayerstats.LeagueDashPlayerStats(season='2025-26', per_mode_detailed='PerGame')
 df = stats.get_data_frames()[0]
 
 # Filter to NBA teams only
@@ -22,6 +22,6 @@ df = df[columns_needed]
 
 # Save to CSV in project directory
 DATA_DIR = Path(__file__).resolve().parent
-df.to_csv(DATA_DIR / 'nba_player_data_24_25.csv', index=False)
+df.to_csv(DATA_DIR / 'nba_player_data_25_26.csv', index=False)
 
-print('NBA player data saved to nba_player_data_24_25.csv')
+print('NBA player data saved to nba_player_data_25_26.csv')

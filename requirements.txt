@@ -4,3 +4,4 @@ gunicorn
 numpy
 matplotlib
 seaborn
+nba_api
