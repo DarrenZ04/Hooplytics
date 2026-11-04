@@ -1,988 +1,934 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
-  <title>Hooplytics - Fantasy Basketball Draft Optimizer</title>
+  <meta charset="utf-8">
+  <title>Hooplytics</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Simulate a fantasy basketball snake draft and see which players your category strategy picks.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23FBFAF6'/%3E%3Ccircle cx='16' cy='16' r='9' fill='%231B44E0'/%3E%3C/svg%3E">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@600;700&display=swap');
-    
-    * {
-      box-sizing: border-box;
+    *, *::before, *::after {
       margin: 0;
       padding: 0;
+      box-sizing: border-box;
     }
-    
+
+    :root {
+      color-scheme: light;
+
+      --paper: #FBFAF6;
+      --paper-2: #F3F1E8;
+      --ink: #17150F;
+      --muted: #6A665C;
+      --line: #E5E1D6;
+      --line-strong: #CFCABA;
+
+      --accent: #1B44E0;
+      --accent-hover: #1638BE;
+      --accent-rgb: 27, 68, 224;
+      --good: #0A7D59;
+      --bad: #C63A22;
+
+      --font-display: 'Bricolage Grotesque', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      --font-text: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+      --radius: 6px;
+      --ease: cubic-bezier(0.16, 1, 0.3, 1);
+      --wrap: 72rem;
+      --bar-h: 3.5rem;
+    }
+
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #000000;
-      color: #ffffff;
-      min-height: 100vh;
-      overflow-x: hidden;
-      line-height: 1.6;
+      min-height: 100dvh;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--font-text);
+      font-size: 0.9375rem;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
     }
-    
-    .page-header {
-      background: linear-gradient(180deg, #0a0a0a 0%, #000000 100%);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-      padding: 32px 24px 0;
+
+    button, input {
+      font: inherit;
+      color: inherit;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    h1, h2, h3 { text-wrap: balance; }
+    p { text-wrap: pretty; }
+
+    .wrap {
+      max-width: var(--wrap);
+      margin: 0 auto;
+      padding: 0 clamp(1rem, 4vw, 2rem);
+    }
+
+    .skip-link {
+      position: fixed;
+      top: 0.75rem;
+      left: 0.75rem;
+      z-index: 60;
+      padding: 0.5rem 0.875rem;
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.8125rem;
+      text-decoration: none;
+      transform: translateY(-160%);
+      transition: transform 0.2s var(--ease);
+    }
+
+    .skip-link:focus-visible { transform: translateY(0); }
+
+    /* ─── Top bar ─── */
+    .topbar {
       position: sticky;
       top: 0;
-      z-index: 100;
-      backdrop-filter: blur(12px);
+      z-index: 50;
+      background: var(--paper);
+      border-bottom: 1px solid var(--line);
     }
-    
-    .header-content {
-      max-width: 1400px;
-      margin: 0 auto;
-    }
-    
-    h1 {
-      font-family: 'Space Grotesk', 'Inter', sans-serif;
-      font-size: 3.5em;
-      font-weight: 700;
-      letter-spacing: -0.03em;
-      margin-bottom: 8px;
-      background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    
-    .description {
-      font-size: 1.125em;
-      color: rgba(255, 255, 255, 0.6);
-      font-weight: 500;
-      letter-spacing: -0.01em;
-      margin-bottom: 32px;
-    }
-    
-    .tab-nav {
+
+    .topbar__row {
       display: flex;
-      gap: 0;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      align-items: center;
+      gap: 2rem;
+      min-height: var(--bar-h);
+    }
+
+    .brand {
+      font-family: var(--font-display);
+      font-size: 1.375rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1;
+    }
+
+    .tabs {
+      display: flex;
+      align-self: stretch;
+      gap: 0.25rem;
       overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
     }
-    
-    .tab-button {
-      background: none;
-      border: none;
-      color: rgba(255, 255, 255, 0.5);
-      padding: 16px 24px;
-      font-size: 0.9375em;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      border-bottom: 2px solid transparent;
-      font-family: 'Inter', sans-serif;
-      letter-spacing: -0.01em;
-      white-space: nowrap;
+
+    .tabs::-webkit-scrollbar { display: none; }
+
+    .tab {
       position: relative;
-    }
-    
-    .tab-button:hover {
-      color: rgba(255, 255, 255, 0.8);
-      background: rgba(255, 255, 255, 0.02);
-    }
-    
-    .tab-button.active {
-      color: #ff6b35;
-      border-bottom-color: #ff6b35;
-    }
-    
-    .container {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 40px 24px;
-    }
-    
-    .tab-content {
-      display: none;
-      animation: fadeIn 0.3s ease;
-    }
-    
-    .tab-content.active {
-      display: block;
-    }
-    
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    
-    h2 {
-      font-family: 'Space Grotesk', 'Inter', sans-serif;
-      font-size: 1.75em;
-      font-weight: 700;
-      margin-bottom: 24px;
-      letter-spacing: -0.02em;
-    }
-    
-    h3 {
-      font-family: 'Space Grotesk', 'Inter', sans-serif;
-      font-size: 1.5em;
-      font-weight: 700;
-      margin-bottom: 20px;
-      letter-spacing: -0.02em;
-    }
-    
-    .settings-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 16px;
-      margin-bottom: 32px;
-    }
-    
-    .input-group {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      padding: 20px;
-      border-radius: 12px;
-      transition: all 0.2s ease;
-    }
-    
-    .input-group:hover {
-      background: rgba(255, 255, 255, 0.05);
-      border-color: rgba(255, 255, 255, 0.12);
-    }
-    
-    label {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      font-size: 0.9375em;
-      font-weight: 600;
-      color: rgba(255, 255, 255, 0.9);
-      letter-spacing: -0.01em;
-    }
-    
-    input[type="number"] {
-      padding: 8px 12px;
-      border-radius: 8px;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      width: 80px;
-      font-size: 1em;
-      background: rgba(0, 0, 0, 0.4);
-      color: #ffffff;
-      font-weight: 600;
-      transition: all 0.2s ease;
-      font-family: 'Inter', sans-serif;
-    }
-    
-    input[type="number"]:focus {
-      outline: none;
-      border-color: #ff6b35;
-      background: rgba(0, 0, 0, 0.6);
-      box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
-    }
-    
-    .punt-section {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      padding: 28px;
-      border-radius: 12px;
-      margin-bottom: 32px;
-    }
-    
-    .punt-section h3 {
-      margin-bottom: 20px;
-      font-size: 1.25em;
-    }
-    
-    #punt_categories {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-      gap: 12px;
-    }
-    
-    #punt_categories label {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 0.875em;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 8px;
-      padding: 12px 14px;
-      transition: all 0.2s ease;
-      cursor: pointer;
+      padding: 0 0.875rem;
+      background: none;
+      border: 0;
+      color: var(--muted);
       font-weight: 500;
-    }
-    
-    #punt_categories label:hover {
-      background: rgba(255, 255, 255, 0.06);
-      border-color: rgba(255, 255, 255, 0.14);
-    }
-    
-    #punt_categories input[type="checkbox"] {
-      width: 18px;
-      height: 18px;
-      margin: 0;
+      white-space: nowrap;
       cursor: pointer;
-      accent-color: #ff6b35;
+      transition: color 0.15s;
     }
-    
-    button {
-      background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
-      color: #000000;
-      border: none;
-      border-radius: 10px;
-      padding: 16px 32px;
-      font-size: 1em;
+
+    .tab::after {
+      content: "";
+      position: absolute;
+      left: 0.875rem;
+      right: 0.875rem;
+      bottom: -1px;
+      height: 2px;
+      background: var(--accent);
+      transform: scaleX(0);
+      transition: transform 0.2s var(--ease);
+    }
+
+    .tab:hover { color: var(--ink); }
+
+    .tab[aria-selected="true"] {
+      color: var(--ink);
+      font-weight: 600;
+    }
+
+    .tab[aria-selected="true"]::after { transform: scaleX(1); }
+
+    /* ─── Panels ─── */
+    main.wrap {
+      padding-block: clamp(1.75rem, 5vw, 3.5rem) 4rem;
+    }
+
+    .panel[hidden] { display: none; }
+
+    h2 {
+      font-family: var(--font-display);
+      font-size: clamp(1.75rem, 4vw, 2.5rem);
       font-weight: 700;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      font-family: 'Inter', sans-serif;
-      letter-spacing: -0.01em;
-      box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+      line-height: 1.05;
+      letter-spacing: -0.035em;
     }
-    
-    button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
+
+    .lede {
+      margin-top: 0.75rem;
+      max-width: 60ch;
+      color: var(--muted);
     }
-    
-    button:active {
-      transform: translateY(0);
+
+    /* ─── Setup form ─── */
+    .setup {
+      display: grid;
+      grid-template-columns: minmax(0, 18rem) minmax(0, 1fr);
+      column-gap: clamp(2rem, 6vw, 5rem);
+      row-gap: 2rem;
+      margin-top: 2.25rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--line);
     }
-    
-    button:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-      transform: none;
+
+    .fields {
+      display: grid;
+      gap: 1.25rem;
+      align-content: start;
     }
-    
-    .simulate-btn-container {
+
+    .field label,
+    .punt legend {
+      display: block;
+      margin-bottom: 0.375rem;
+      font-weight: 600;
+    }
+
+    .field input {
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      background: #fff;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      font-variant-numeric: tabular-nums;
+      transition: border-color 0.15s;
+    }
+
+    .field input:hover { border-color: var(--ink); }
+
+    .hint {
+      margin-top: 0.375rem;
+      color: var(--muted);
+      font-size: 0.8125rem;
+    }
+
+    .punt {
+      border: 0;
+      min-width: 0;
+    }
+
+    .punt legend { padding: 0; }
+
+    .chips {
       display: flex;
-      justify-content: center;
-      margin-top: 32px;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.875rem;
     }
-    
-    .loading-spinner {
-      display: inline-block;
-      width: 16px;
-      height: 16px;
-      border: 2px solid rgba(0, 0, 0, 0.2);
-      border-radius: 50%;
-      border-top-color: #000000;
-      animation: spin 0.8s linear infinite;
-      margin-right: 8px;
-      vertical-align: middle;
+
+    .chip { position: relative; }
+
+    .chip input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
     }
-    
-    @keyframes spin {
-      to { transform: rotate(360deg); }
+
+    .chip span {
+      display: block;
+      padding: 0.45rem 0.9rem;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: #fff;
+      transition: background-color 0.15s, border-color 0.15s, color 0.15s;
     }
-    
+
+    .chip:hover span { border-color: var(--ink); }
+
+    .chip input:checked + span {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .chip input:focus-visible + span {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .actions {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .btn {
+      padding: 0.7rem 1.25rem;
+      border: 1px solid transparent;
+      border-radius: var(--radius);
+      font-weight: 500;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: background-color 0.15s, transform 0.1s;
+    }
+
+    .btn:active:not(:disabled) { transform: translateY(1px); }
+
+    .btn--primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn--primary:hover:not(:disabled) { background: var(--accent-hover); }
+
+    .btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .form-error {
+      color: var(--bad);
+      font-size: 0.875rem;
+    }
+
+    /* ─── Tables ─── */
+    .table-head {
+      margin-bottom: 1.5rem;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border-top: 1px solid var(--line-strong);
+    }
+
     table {
       width: 100%;
-      border-collapse: separate;
-      border-spacing: 0;
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 12px;
-      overflow: hidden;
-      margin-top: 24px;
+      min-width: 52rem;
+      border-collapse: collapse;
+      font-variant-numeric: tabular-nums;
     }
-    
+
     th, td {
-      padding: 16px 14px;
-      text-align: left;
-      font-size: 0.875em;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 0.5rem 0.75rem;
+      text-align: right;
+      border-bottom: 1px solid var(--line);
+      white-space: nowrap;
     }
-    
+
     th {
-      background: rgba(255, 255, 255, 0.04);
-      font-weight: 700;
-      letter-spacing: -0.01em;
-      text-transform: uppercase;
-      font-size: 0.75em;
-      color: rgba(255, 255, 255, 0.6);
-    }
-    
-    tbody tr {
-      transition: all 0.15s ease;
-    }
-    
-    tbody tr:hover {
-      background: rgba(255, 107, 53, 0.05);
-    }
-    
-    tbody tr:last-child td {
-      border-bottom: none;
-    }
-    
-    .player-headshot {
-      width: 72px;
-      height: 72px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 2px solid rgba(255, 255, 255, 0.1);
-      transition: all 0.2s ease;
-    }
-    
-    .player-headshot:hover {
-      border-color: #ff6b35;
-      transform: scale(1.1);
-    }
-    
-    .stat-cell {
+      padding-block: 0.65rem;
+      color: var(--muted);
+      font-size: 0.8125rem;
       font-weight: 600;
-      color: rgba(255, 255, 255, 0.9);
+      border-bottom-color: var(--line-strong);
     }
-    
-    .score-cell {
-      color: #ff6b35;
-      font-weight: 800;
-      font-size: 1.1em;
+
+    th.l, td.l { text-align: left; }
+
+    td.rank { color: var(--muted); width: 3rem; }
+
+    td.score {
+      color: var(--accent);
+      font-weight: 600;
     }
-    
-    .rank-cell {
-      color: rgba(255, 255, 255, 0.5);
-      font-weight: 700;
-      font-size: 1em;
+
+    td small {
+      display: block;
+      color: var(--muted);
+      font-size: 0.75rem;
+      line-height: 1.2;
     }
-    
-    .empty-state {
+
+    tbody tr:hover { background: var(--paper-2); }
+
+    tbody tr.is-mine td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+    tbody tr.is-mine { background: rgba(var(--accent-rgb), 0.06); }
+
+    .player {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 500;
+    }
+
+    .avatar {
+      flex: none;
+      width: 2.25rem;
+      height: 2.25rem;
+      border-radius: 50%;
+      background: var(--paper-2);
+      border: 1px solid var(--line);
+      object-fit: cover;
+      object-position: 50% 12%;
+    }
+
+    .avatar--initials {
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .empty td {
+      padding: 3rem 0.75rem;
       text-align: center;
-      padding: 60px 20px;
-      color: rgba(255, 255, 255, 0.4);
-      font-size: 0.9375em;
+      color: var(--muted);
+      white-space: normal;
     }
-    
-    .chart-container {
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      padding: 28px;
-      border-radius: 12px;
-      margin-bottom: 24px;
+
+    .empty.is-error td { color: var(--bad); }
+
+    .skel {
+      display: block;
+      width: 100%;
+      height: 0.75rem;
+      border-radius: 3px;
+      background: linear-gradient(90deg, var(--paper-2), var(--line), var(--paper-2));
+      background-size: 200% 100%;
+      animation: shimmer 1.4s linear infinite;
     }
-    
-    .chart-container h4 {
-      font-family: 'Space Grotesk', 'Inter', sans-serif;
-      font-size: 1.25em;
+
+    @keyframes shimmer { to { background-position: -200% 0; } }
+
+    /* ─── Analytics ─── */
+    .analytics-actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .charts {
+      display: grid;
+      gap: 2.5rem;
+      margin-top: 2rem;
+    }
+
+    .chart h3 {
+      margin-bottom: 0.25rem;
+      font-family: var(--font-display);
+      font-size: 1.25rem;
       font-weight: 700;
-      margin-bottom: 20px;
       letter-spacing: -0.02em;
     }
-    
-    .analytics-btn {
-      background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
-      color: #000000;
-      margin: 0 auto;
-      display: block;
+
+    .chart .hint { margin: 0 0 1rem; }
+
+    .chart__box {
+      position: relative;
+      height: 20rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--line-strong);
     }
-    
-    .analytics-placeholder {
-      text-align: center;
-      padding: 80px 40px;
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 12px;
+
+    .notice {
+      margin-top: 2rem;
+      padding: 2rem 0;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
     }
-    
-    .analytics-placeholder h3 {
-      color: #ff6b35;
-      margin-bottom: 12px;
+
+    .notice strong { color: var(--ink); }
+
+    /* ─── Responsive ─── */
+    @media (max-width: 52rem) {
+      .setup { grid-template-columns: minmax(0, 1fr); row-gap: 1.75rem; }
+      .topbar__row { gap: 1rem; }
+      .chart__box { height: 16rem; }
     }
-    
-    .analytics-placeholder p {
-      color: rgba(255, 255, 255, 0.5);
-      font-size: 1em;
-      line-height: 1.6;
-      max-width: 500px;
-      margin: 0 auto;
+
+    @media (max-width: 30rem) {
+      .brand { font-size: 1.125rem; }
+      .tab { padding: 0 0.625rem; }
+      .tab::after { left: 0.625rem; right: 0.625rem; }
     }
-    
-    .analytics-intro {
-      text-align: center;
-      color: rgba(255, 255, 255, 0.6);
-      margin-bottom: 32px;
-      font-size: 1em;
-    }
-    
-    @media (max-width: 768px) {
-      h1 {
-        font-size: 2.25em;
-      }
-      
-      .description {
-        font-size: 1em;
-      }
-      
-      .page-header {
-        padding: 24px 16px 0;
-      }
-      
-      .container {
-        padding: 32px 16px;
-      }
-      
-      .tab-button {
-        font-size: 0.875em;
-        padding: 14px 16px;
-      }
-      
-      .settings-grid {
-        grid-template-columns: 1fr;
-      }
-      
-      #punt_categories {
-        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-      }
-      
-      table {
-        font-size: 0.75em;
-      }
-      
-      th, td {
-        padding: 12px 8px;
-      }
-      
-      .player-headshot {
-        width: 56px;
-        height: 56px;
-      }
-      
-      .chart-container {
-        padding: 20px;
-      }
+
+    @media (prefers-reduced-motion: reduce) {
+      .skel { animation: none; }
+      .tab::after, .btn, .skip-link { transition: none; }
     }
   </style>
 </head>
+
 <body>
-  <div class="page-header">
-    <div class="header-content">
-      <h1>Hooplytics</h1>
-      <p class="description">Advanced Fantasy Basketball Draft Optimizer</p>
-      
-      <div class="tab-nav">
-        <button class="tab-button active" onclick="switchTab('settings')">Draft Settings</button>
-        <button class="tab-button" onclick="switchTab('your-team')">Your Team</button>
-        <button class="tab-button" onclick="switchTab('draft-pool')">Draft Pool</button>
-        <button class="tab-button" onclick="switchTab('analytics')">Analytics</button>
-      </div>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="topbar">
+    <div class="wrap topbar__row">
+      <h1 class="brand">Hooplytics</h1>
+      <nav class="tabs" role="tablist" aria-label="Sections">
+        <button class="tab" role="tab" id="tab-settings" aria-controls="settings-tab" aria-selected="true" data-tab="settings">Setup</button>
+        <button class="tab" role="tab" id="tab-your-team" aria-controls="your-team-tab" aria-selected="false" data-tab="your-team" tabindex="-1">Your team</button>
+        <button class="tab" role="tab" id="tab-draft-pool" aria-controls="draft-pool-tab" aria-selected="false" data-tab="draft-pool" tabindex="-1">Draft pool</button>
+        <button class="tab" role="tab" id="tab-analytics" aria-controls="analytics-tab" aria-selected="false" data-tab="analytics" tabindex="-1">Analytics</button>
+      </nav>
     </div>
-  </div>
+  </header>
 
-  <div class="container">
-    <div id="settings-tab" class="tab-content active">
-      <h2>Draft Configuration</h2>
-      <div class="settings-grid">
-        <div class="input-group">
-          <label>
-            Number of Teams
-            <input type="number" id="num_teams" value="10" min="2" max="20">
-          </label>
+  <main id="main" class="wrap">
+    <section id="settings-tab" class="panel" role="tabpanel" aria-labelledby="tab-settings">
+      <h2>Simulate your draft</h2>
+      <p class="lede">The other teams take the best player available by overall value. You pick by your own ranking, so punting a category changes who you take.</p>
+
+      <form class="setup" id="setup-form" novalidate>
+        <div class="fields">
+          <div class="field">
+            <label for="num_teams">Teams</label>
+            <input type="number" id="num_teams" value="10" min="2" max="20" inputmode="numeric">
+          </div>
+          <div class="field">
+            <label for="num_rounds">Rounds</label>
+            <input type="number" id="num_rounds" value="13" min="1" max="20" inputmode="numeric">
+          </div>
+          <div class="field">
+            <label for="your_pick">Your draft position</label>
+            <input type="number" id="your_pick" value="1" min="1" max="20" inputmode="numeric">
+            <p class="hint">Snake order. Position 1 picks first and last in the first two rounds.</p>
+          </div>
         </div>
-        <div class="input-group">
-          <label>
-            Number of Rounds
-            <input type="number" id="num_rounds" value="13" min="1" max="20">
-          </label>
+
+        <fieldset class="punt">
+          <legend>Punt categories</legend>
+          <p class="hint">Selected categories are ignored when ranking players for your picks.</p>
+          <div class="chips" id="punt_categories">
+            <label class="chip"><input type="checkbox" value="PTS"><span>Points</span></label>
+            <label class="chip"><input type="checkbox" value="REB"><span>Rebounds</span></label>
+            <label class="chip"><input type="checkbox" value="AST"><span>Assists</span></label>
+            <label class="chip"><input type="checkbox" value="STL"><span>Steals</span></label>
+            <label class="chip"><input type="checkbox" value="BLK"><span>Blocks</span></label>
+            <label class="chip"><input type="checkbox" value="FG_PCT"><span>FG%</span></label>
+            <label class="chip"><input type="checkbox" value="FT_PCT"><span>FT%</span></label>
+            <label class="chip"><input type="checkbox" value="FG3M"><span>3-pointers</span></label>
+            <label class="chip"><input type="checkbox" value="TOV"><span>Turnovers</span></label>
+          </div>
+        </fieldset>
+
+        <div class="actions">
+          <button type="submit" class="btn btn--primary" id="simulate-btn">Simulate draft</button>
+          <p class="form-error" id="setup-error" role="alert" hidden></p>
         </div>
-        <div class="input-group">
-          <label>
-            Your Draft Position
-            <input type="number" id="your_pick" value="1" min="1" max="20">
-          </label>
-        </div>
+      </form>
+    </section>
+
+    <section id="your-team-tab" class="panel" role="tabpanel" aria-labelledby="tab-your-team" hidden>
+      <div class="table-head">
+        <h2>Your team</h2>
+        <p class="lede">Players your strategy drafted, ranked by their position in the full pool. Score is the punt-adjusted total z-score.</p>
+      </div>
+      <div class="table-wrap">
+        <table id="your_team_table">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="draft-pool-tab" class="panel" role="tabpanel" aria-labelledby="tab-draft-pool" hidden>
+      <div class="table-head">
+        <h2>Draft pool</h2>
+        <p class="lede">Every drafted-range player ranked by your strategy. Your own picks are marked.</p>
+      </div>
+      <div class="table-wrap">
+        <table id="draft_pool_table">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="analytics-tab" class="panel" role="tabpanel" aria-labelledby="tab-analytics" hidden>
+      <h2>Team analytics</h2>
+      <p class="lede">Your team's per-player averages next to the average player in the pool.</p>
+
+      <div class="notice" id="analytics-placeholder">
+        <strong>No team yet.</strong> Simulate a draft first, then compare it here.
       </div>
 
-      <div class="punt-section">
-        <h3>Punt Categories</h3>
-        <div id="punt_categories">
-          <label><input type="checkbox" value="PTS"> Points</label>
-          <label><input type="checkbox" value="REB"> Rebounds</label>
-          <label><input type="checkbox" value="AST"> Assists</label>
-          <label><input type="checkbox" value="STL"> Steals</label>
-          <label><input type="checkbox" value="BLK"> Blocks</label>
-          <label><input type="checkbox" value="FG_PCT"> FG%</label>
-          <label><input type="checkbox" value="FT_PCT"> FT%</label>
-          <label><input type="checkbox" value="FG3M"> 3PM</label>
-          <label><input type="checkbox" value="TOV"> Turnovers</label>
+      <div class="analytics-actions" id="analytics-controls" hidden>
+        <button type="button" class="btn btn--primary" id="analytics-btn">Compare with league</button>
+        <p class="form-error" id="analytics-error" role="alert" hidden></p>
+      </div>
+
+      <div class="charts" id="analytics-content" hidden>
+        <div class="chart">
+          <h3>Team vs league average</h3>
+          <p class="hint">Raw per-player averages. Percentages are on a 0 to 100 scale, so they dominate the axis.</p>
+          <div class="chart__box"><canvas id="teamComparisonChart"></canvas></div>
+        </div>
+        <div class="chart">
+          <h3>Difference from league average</h3>
+          <p class="hint">Positive is better. Turnovers are flipped because fewer is better.</p>
+          <div class="chart__box"><canvas id="categoryBreakdownChart"></canvas></div>
         </div>
       </div>
+    </section>
+  </main>
 
-      <div class="simulate-btn-container">
-        <button onclick="simulateDraft()" id="simulate-btn">
-          Simulate Draft
-        </button>
-      </div>
-    </div>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 
-    <div id="your-team-tab" class="tab-content">
-      <h3>Your Recommended Team</h3>
-      <table id="your_team_table">
-        <thead>
-          <tr>
-            <th>Rank</th>
-            <th></th>
-            <th>Player</th>
-            <th>Score</th>
-            <th>GP</th>
-            <th>PTS</th>
-            <th>REB</th>
-            <th>AST</th>
-            <th>STL</th>
-            <th>BLK</th>
-            <th>FG</th>
-            <th>FT</th>
-            <th>3PM</th>
-            <th>TOV</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr><td colspan="14" class="empty-state">Run a draft simulation to see your recommended team</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div id="draft-pool-tab" class="tab-content">
-      <h3>Top Available Players</h3>
-      <table id="draft_pool_table">
-        <thead>
-          <tr>
-            <th>Rank</th>
-            <th></th>
-            <th>Player</th>
-            <th>Score</th>
-            <th>GP</th>
-            <th>PTS</th>
-            <th>REB</th>
-            <th>AST</th>
-            <th>STL</th>
-            <th>BLK</th>
-            <th>FG</th>
-            <th>FT</th>
-            <th>3PM</th>
-            <th>TOV</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr><td colspan="14" class="empty-state">Run a draft simulation to see the top draft pool</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div id="analytics-tab" class="tab-content">
-      <h3>Player Analytics Dashboard</h3>
-      <p class="analytics-intro">Compare your team's performance against league averages across all statistical categories</p>
-      
-      <div id="analytics-controls" style="text-align: center; margin-bottom: 32px; display: none;">
-        <button onclick="loadTeamAnalytics()" class="analytics-btn">
-          Load Team Analytics
-        </button>
-      </div>
-      
-      <div id="analytics-content" style="display: none;">
-        <div class="chart-container">
-          <h4>Team vs League Averages</h4>
-          <canvas id="teamComparisonChart"></canvas>
-        </div>
-        
-        <div class="chart-container">
-          <h4>Category Performance</h4>
-          <canvas id="categoryBreakdownChart"></canvas>
-        </div>
-      </div>
-      
-      <div id="analytics-placeholder" class="analytics-placeholder">
-        <h3>No Data Available</h3>
-        <p>Run a draft simulation first to see comprehensive analytics showing how your team compares to league averages across all statistical categories.</p>
-      </div>
-    </div>
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  
   <script>
+    const CATEGORIES = ['PTS', 'REB', 'AST', 'STL', 'BLK', 'FG_PCT', 'FT_PCT', 'FG3M', 'TOV'];
+    const COLORS = {
+      accent: '#1B44E0',
+      neutral: '#CFCABA',
+      good: '#0A7D59',
+      bad: '#C63A22',
+      ink: '#17150F',
+      muted: '#6A665C',
+      grid: '#E5E1D6'
+    };
+    const COLUMNS = [
+      ['#', 'l'], ['Player', 'l'], ['Score', ''], ['GP', ''], ['PTS', ''], ['REB', ''], ['AST', ''],
+      ['STL', ''], ['BLK', ''], ['FG', ''], ['FT', ''], ['3PM', ''], ['TOV', '']
+    ];
+
+    const LABELS = { FG_PCT: 'FG%', FT_PCT: 'FT%', FG3M: '3PM' };
+    const label = cat => LABELS[cat] || cat;
+
+    let hasTeam = false;
     let teamComparisonChart = null;
     let categoryBreakdownChart = null;
-    
-    function switchTab(tabName) {
-      const tabContents = document.querySelectorAll('.tab-content');
-      tabContents.forEach(tab => tab.classList.remove('active'));
-      
-      const tabButtons = document.querySelectorAll('.tab-button');
-      tabButtons.forEach(button => button.classList.remove('active'));
-      
-      document.getElementById(tabName + '-tab').classList.add('active');
-      event.target.classList.add('active');
-      
-      if (tabName === 'analytics') {
-        checkAnalyticsAvailability();
-      }
+
+    const $ = id => document.getElementById(id);
+
+    const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+    function esc(value) {
+      return String(value).replace(/[&<>"']/g, ch => ESC[ch]);
     }
-    
-    function checkAnalyticsAvailability() {
-      const yourTeamTable = document.getElementById('your_team_table');
-      const hasTeamData = !yourTeamTable.querySelector('tbody .empty-state');
-      
-      if (hasTeamData) {
-        document.getElementById('analytics-controls').style.display = 'block';
-        document.getElementById('analytics-placeholder').style.display = 'none';
-      } else {
-        document.getElementById('analytics-controls').style.display = 'none';
-        document.getElementById('analytics-placeholder').style.display = 'block';
-        document.getElementById('analytics-content').style.display = 'none';
-      }
+
+    /* ─── Tabs ─── */
+    const tabs = Array.from(document.querySelectorAll('.tab'));
+
+    function switchTab(name) {
+      tabs.forEach(tab => {
+        const on = tab.dataset.tab === name;
+        tab.setAttribute('aria-selected', on);
+        tab.tabIndex = on ? 0 : -1;
+        $(tab.dataset.tab + '-tab').hidden = !on;
+      });
+      if (name === 'analytics') updateAnalyticsAvailability();
     }
-    
-    function loadTeamAnalytics() {
-      const button = document.querySelector('.analytics-btn');
-      button.innerHTML = '<span class="loading-spinner"></span>Loading Analytics...';
-      button.disabled = true;
-      
-      const numTeams = parseInt(document.getElementById("num_teams").value);
-      const numRounds = parseInt(document.getElementById("num_rounds").value);
-      const yourPick = parseInt(document.getElementById("your_pick").value);
-      const puntChecks = document.querySelectorAll("#punt_categories input[type=checkbox]:checked");
-      const puntCategories = Array.from(puntChecks).map(cb => cb.value);
-      
-      fetch('/team_analytics', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          categories: ['PTS', 'REB', 'AST', 'STL', 'BLK', 'FG_PCT', 'FT_PCT', 'FG3M', 'TOV'],
-          invert: ['TOV'],
-          punt: puntCategories,
-          min_gp: 20,
-          user_pick: yourPick,
-          num_teams: numTeams,
-          num_rounds: numRounds
-        })
-      })
-      .then(res => res.json())
-      .then(data => {
-        button.innerHTML = 'Load Team Analytics';
-        button.disabled = false;
-        
-        document.getElementById('analytics-content').style.display = 'block';
-        document.getElementById('analytics-placeholder').style.display = 'none';
-        
-        createTeamComparisonChart(data);
-        createCategoryBreakdownChart(data);
-      })
-      .catch(error => {
-        console.error('Error:', error);
-        button.innerHTML = 'Load Team Analytics';
-        button.disabled = false;
-        alert('Error loading team analytics. Please try again.');
+
+    tabs.forEach((tab, i) => {
+      tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+      tab.addEventListener('keydown', e => {
+        const step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+        if (!step) return;
+        const next = tabs[(i + step + tabs.length) % tabs.length];
+        next.focus();
+        switchTab(next.dataset.tab);
+      });
+    });
+
+    /* ─── Tables ─── */
+    function renderHeads() {
+      const head = '<tr>' + COLUMNS.map(([label, cls]) => `<th scope="col" class="${cls}">${label}</th>`).join('') + '</tr>';
+      document.querySelectorAll('thead').forEach(el => { el.innerHTML = head; });
+    }
+
+    function emptyRow(message, isError) {
+      return `<tr class="empty${isError ? ' is-error' : ''}"><td colspan="${COLUMNS.length}">${esc(message)}</td></tr>`;
+    }
+
+    function skeletonRows(count) {
+      const cell = '<td><span class="skel"></span></td>';
+      return Array.from({ length: count }, () => '<tr>' + cell.repeat(COLUMNS.length) + '</tr>').join('');
+    }
+
+    function initials(name) {
+      return name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+    }
+
+    function avatar(player) {
+      if (!player.player_id) {
+        return `<span class="avatar avatar--initials" aria-hidden="true">${esc(initials(player.name))}</span>`;
+      }
+      const url = `https://cdn.nba.com/headshots/nba/latest/1040x760/${encodeURIComponent(player.player_id)}.png`;
+      return `<img class="avatar" src="${url}" alt="" width="36" height="36" loading="lazy" data-name="${esc(player.name)}">`;
+    }
+
+    // headshots that fail to load fall back to initials
+    document.addEventListener('error', e => {
+      const img = e.target;
+      if (!(img instanceof HTMLImageElement) || !img.classList.contains('avatar')) return;
+      const span = document.createElement('span');
+      span.className = 'avatar avatar--initials';
+      span.setAttribute('aria-hidden', 'true');
+      span.textContent = initials(img.dataset.name || '');
+      img.replaceWith(span);
+    }, true);
+
+    function shooting(made, att) {
+      const pct = att ? (made / att * 100).toFixed(1) : '0.0';
+      return `${made}/${att}<small>${pct}%</small>`;
+    }
+
+    function playerRow(player, rank, mine) {
+      const s = player.stats;
+      return `<tr${mine ? ' class="is-mine"' : ''}>
+        <td class="rank l">${rank === '' ? '' : rank}</td>
+        <td class="l"><div class="player">${avatar(player)}<span>${esc(player.name)}</span></div></td>
+        <td class="score">${player.adjusted_z}</td>
+        <td>${player.gp}</td>
+        <td>${s.PTS}</td>
+        <td>${s.REB}</td>
+        <td>${s.AST}</td>
+        <td>${s.STL}</td>
+        <td>${s.BLK}</td>
+        <td>${shooting(s.FGM, s.FGA)}</td>
+        <td>${shooting(s.FTM, s.FTA)}</td>
+        <td>${s.FG3M}</td>
+        <td>${s.TOV}</td>
+      </tr>`;
+    }
+
+    /* ─── Form ─── */
+    function readSettings() {
+      return {
+        numTeams: parseInt($('num_teams').value, 10),
+        numRounds: parseInt($('num_rounds').value, 10),
+        yourPick: parseInt($('your_pick').value, 10),
+        punt: Array.from(document.querySelectorAll('#punt_categories input:checked')).map(cb => cb.value)
+      };
+    }
+
+    function requestBody() {
+      const s = readSettings();
+      return JSON.stringify({
+        categories: CATEGORIES,
+        invert: ['TOV'],
+        punt: s.punt,
+        min_gp: 20,
+        user_pick: s.yourPick,
+        num_teams: s.numTeams,
+        num_rounds: s.numRounds
       });
     }
-    
-    function createTeamComparisonChart(data) {
-      const ctx = document.getElementById('teamComparisonChart').getContext('2d');
-      
-      if (teamComparisonChart) {
-        teamComparisonChart.destroy();
+
+    function showError(el, message) {
+      el.textContent = message;
+      el.hidden = !message;
+    }
+
+    function validateInputs() {
+      const s = readSettings();
+      if (!(s.numTeams >= 2 && s.numTeams <= 20)) return 'Teams must be between 2 and 20.';
+      if (!(s.numRounds >= 1 && s.numRounds <= 20)) return 'Rounds must be between 1 and 20.';
+      if (!(s.yourPick >= 1 && s.yourPick <= s.numTeams)) return `Draft position must be between 1 and ${s.numTeams}.`;
+      return '';
+    }
+
+    $('num_teams').addEventListener('input', function () {
+      const teams = parseInt(this.value, 10);
+      const pick = $('your_pick');
+      if (teams >= 2 && parseInt(pick.value, 10) > teams) pick.value = teams;
+    });
+
+    $('setup-form').addEventListener('submit', e => {
+      e.preventDefault();
+      simulateDraft();
+    });
+
+    async function postJSON(url) {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: requestBody()
+      });
+      if (!res.ok) throw new Error(`Request failed (${res.status})`);
+      return res.json();
+    }
+
+    async function simulateDraft() {
+      const problem = validateInputs();
+      showError($('setup-error'), problem);
+      if (problem) return;
+
+      const button = $('simulate-btn');
+      const teamBody = document.querySelector('#your_team_table tbody');
+      const poolBody = document.querySelector('#draft_pool_table tbody');
+
+      button.textContent = 'Simulating...';
+      button.disabled = true;
+      teamBody.innerHTML = skeletonRows(8);
+      poolBody.innerHTML = skeletonRows(12);
+
+      try {
+        const data = await postJSON('/simulate_draft');
+        const { numTeams, numRounds } = readSettings();
+
+        const pool = data.top_draft_pool.slice(0, numTeams * numRounds);
+        const poolRank = new Map(data.top_draft_pool.map((p, i) => [p.name, i + 1]));
+        const mine = new Set(data.your_team.map(p => p.name));
+
+        teamBody.innerHTML = data.your_team.map(p => playerRow(p, poolRank.get(p.name) || '', false)).join('')
+          || emptyRow('No players were drafted. Try more rounds.');
+        poolBody.innerHTML = pool.map((p, i) => playerRow(p, i + 1, mine.has(p.name))).join('')
+          || emptyRow('No players available.');
+
+        hasTeam = data.your_team.length > 0;
+        switchTab('your-team');
+      } catch (err) {
+        console.error(err);
+        const msg = 'Could not load the draft. Check your connection and try again.';
+        teamBody.innerHTML = emptyRow(msg, true);
+        poolBody.innerHTML = emptyRow(msg, true);
+        showError($('setup-error'), msg);
+        hasTeam = false;
+      } finally {
+        button.textContent = 'Simulate draft';
+        button.disabled = false;
       }
-      
+    }
+
+    /* ─── Analytics ─── */
+    function updateAnalyticsAvailability() {
+      $('analytics-controls').hidden = !hasTeam;
+      $('analytics-placeholder').hidden = hasTeam;
+      if (!hasTeam) $('analytics-content').hidden = true;
+    }
+
+    $('analytics-btn').addEventListener('click', async () => {
+      const button = $('analytics-btn');
+      const errorEl = $('analytics-error');
+      showError(errorEl, '');
+      button.textContent = 'Loading...';
+      button.disabled = true;
+
+      try {
+        const data = await postJSON('/team_analytics');
+        $('analytics-content').hidden = false;
+        createTeamComparisonChart(data);
+        createCategoryBreakdownChart(data);
+      } catch (err) {
+        console.error(err);
+        showError(errorEl, 'Could not load analytics. Try again.');
+      } finally {
+        button.textContent = 'Compare with league';
+        button.disabled = false;
+      }
+    });
+
+    function calculateTeamAverages(teamData, categories) {
+      const averages = {};
+      categories.forEach(category => {
+        const values = teamData
+          .map(player => player.stats[category])
+          .filter(val => val !== undefined && val !== null);
+        averages[category] = values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : 0;
+      });
+      return averages;
+    }
+
+    function chartDefaults() {
+      Chart.defaults.font.family = "'Instrument Sans', system-ui, sans-serif";
+      Chart.defaults.font.size = 12;
+      Chart.defaults.color = COLORS.muted;
+    }
+
+    function axisOptions(extraY) {
+      return {
+        y: Object.assign({
+          grid: { color: COLORS.grid },
+          border: { display: false },
+          ticks: { color: COLORS.muted }
+        }, extraY),
+        x: {
+          grid: { display: false },
+          border: { color: COLORS.grid },
+          ticks: { color: COLORS.ink, font: { weight: '600' } }
+        }
+      };
+    }
+
+    function createTeamComparisonChart(data) {
+      chartDefaults();
+      if (teamComparisonChart) teamComparisonChart.destroy();
+
       const categories = data.stat_categories;
       const teamAverages = calculateTeamAverages(data.team_data, categories);
-      const leagueAverages = data.league_averages;
-      
-      teamComparisonChart = new Chart(ctx, {
+
+      teamComparisonChart = new Chart($('teamComparisonChart').getContext('2d'), {
         type: 'bar',
         data: {
-          labels: categories,
+          labels: categories.map(label),
           datasets: [
             {
-              label: 'Your Team',
-              data: categories.map(cat => teamAverages[cat] || 0),
-              backgroundColor: 'rgba(255, 107, 53, 0.8)',
-              borderColor: 'rgba(255, 107, 53, 1)',
-              borderWidth: 0,
-              borderRadius: 6
+              label: 'Your team',
+              data: categories.map(c => teamAverages[c] || 0),
+              backgroundColor: COLORS.accent,
+              borderRadius: 3
             },
             {
-              label: 'League Average',
-              data: categories.map(cat => leagueAverages[cat] || 0),
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              borderColor: 'rgba(255, 255, 255, 0.2)',
-              borderWidth: 1,
-              borderRadius: 6
+              label: 'League average',
+              data: categories.map(c => data.league_averages[c] || 0),
+              backgroundColor: COLORS.neutral,
+              borderRadius: 3
             }
           ]
         },
         options: {
           responsive: true,
-          maintainAspectRatio: true,
-          aspectRatio: 2.5,
+          maintainAspectRatio: false,
           plugins: {
-            legend: {
-              labels: { 
-                color: 'rgba(255, 255, 255, 0.8)',
-                font: { family: 'Inter', size: 13, weight: '600' },
-                padding: 16
-              }
-            }
+            legend: { position: 'top', align: 'end', labels: { boxWidth: 12, boxHeight: 12, color: COLORS.ink } }
           },
-          scales: {
-            y: {
-              beginAtZero: true,
-              grid: { color: 'rgba(255, 255, 255, 0.05)' },
-              ticks: { 
-                color: 'rgba(255, 255, 255, 0.6)',
-                font: { family: 'Inter', size: 12 }
-              }
-            },
-            x: {
-              grid: { display: false },
-              ticks: { 
-                color: 'rgba(255, 255, 255, 0.6)',
-                font: { family: 'Inter', size: 12, weight: '600' }
-              }
-            }
-          }
+          scales: axisOptions({ beginAtZero: true })
         }
       });
     }
-    
+
     function createCategoryBreakdownChart(data) {
-      const ctx = document.getElementById('categoryBreakdownChart').getContext('2d');
-      
-      if (categoryBreakdownChart) {
-        categoryBreakdownChart.destroy();
-      }
-      
+      chartDefaults();
+      if (categoryBreakdownChart) categoryBreakdownChart.destroy();
+
       const categories = data.stat_categories;
       const teamAverages = calculateTeamAverages(data.team_data, categories);
-      const leagueAverages = data.league_averages;
-      
-      const percentageDifferences = categories.map(cat => {
-        const teamAvg = teamAverages[cat] || 0;
-        const leagueAvg = leagueAverages[cat] || 0;
-        if (leagueAvg === 0) return 0;
-        return ((teamAvg - leagueAvg) / leagueAvg) * 100;
+
+      const differences = categories.map(cat => {
+        const league = data.league_averages[cat] || 0;
+        if (league === 0) return 0;
+        const diff = ((teamAverages[cat] || 0) - league) / league * 100;
+        return cat === 'TOV' ? -diff : diff;
       });
-      
-      categoryBreakdownChart = new Chart(ctx, {
+
+      categoryBreakdownChart = new Chart($('categoryBreakdownChart').getContext('2d'), {
         type: 'bar',
         data: {
-          labels: categories,
+          labels: categories.map(label),
           datasets: [{
-            label: 'Performance vs League (%)',
-            data: percentageDifferences,
-            backgroundColor: percentageDifferences.map(val => 
-              val > 0 ? 'rgba(76, 175, 80, 0.8)' : 'rgba(239, 68, 68, 0.8)'
-            ),
-            borderColor: percentageDifferences.map(val => 
-              val > 0 ? 'rgba(76, 175, 80, 1)' : 'rgba(239, 68, 68, 1)'
-            ),
-            borderWidth: 0,
-            borderRadius: 6
+            label: 'Difference from league (%)',
+            data: differences,
+            backgroundColor: differences.map(v => (v >= 0 ? COLORS.good : COLORS.bad)),
+            borderRadius: 3
           }]
         },
         options: {
           responsive: true,
-          maintainAspectRatio: true,
-          aspectRatio: 2.5,
-          plugins: {
-            legend: {
-              labels: { 
-                color: 'rgba(255, 255, 255, 0.8)',
-                font: { family: 'Inter', size: 13, weight: '600' },
-                padding: 16
-              }
-            }
-          },
-          scales: {
-            y: {
-              grid: { color: 'rgba(255, 255, 255, 0.05)' },
-              ticks: { 
-                color: 'rgba(255, 255, 255, 0.6)',
-                font: { family: 'Inter', size: 12 },
-                callback: function(value) { return value + '%'; }
-              }
-            },
-            x: {
-              grid: { display: false },
-              ticks: { 
-                color: 'rgba(255, 255, 255, 0.6)',
-                font: { family: 'Inter', size: 12, weight: '600' }
-              }
-            }
-          }
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: axisOptions({ ticks: { color: COLORS.muted, callback: v => v + '%' } })
         }
       });
     }
-    
-    function calculateTeamAverages(teamData, categories) {
-      const averages = {};
-      
-      categories.forEach(category => {
-        const values = teamData
-          .map(player => player.stats[category])
-          .filter(val => val !== undefined && val !== null);
-        
-        if (values.length > 0) {
-          averages[category] = values.reduce((sum, val) => sum + val, 0) / values.length;
-        } else {
-          averages[category] = 0;
-        }
-      });
-      
-      return averages;
-    }
 
-    function validateInputs() {
-      const numTeams = parseInt(document.getElementById("num_teams").value);
-      const numRounds = parseInt(document.getElementById("num_rounds").value);
-      const yourPick = parseInt(document.getElementById("your_pick").value);
-      
-      if (numTeams < 2) {
-        document.getElementById("num_teams").value = 2;
-        return false;
-      }
-      
-      if (yourPick < 1 || yourPick > numTeams) {
-        document.getElementById("your_pick").value = Math.max(1, Math.min(numTeams, yourPick));
-        return false;
-      }
-      
-      return true;
-    }
-    
-    document.getElementById("num_teams").addEventListener('input', function() {
-      const numTeams = parseInt(this.value);
-      const yourPick = parseInt(document.getElementById("your_pick").value);
-      
-      if (numTeams < 2) {
-        this.value = 2;
-      }
-      
-      const positionInput = document.getElementById("your_pick");
-      if (yourPick > numTeams) {
-        positionInput.value = numTeams;
-      }
-    });
-    
-    document.getElementById("your_pick").addEventListener('input', function() {
-      const numTeams = parseInt(document.getElementById("num_teams").value);
-      const yourPick = parseInt(this.value);
-      
-      if (yourPick < 1) {
-        this.value = 1;
-      } else if (yourPick > numTeams) {
-        this.value = numTeams;
-      }
-    });
-
-    function simulateDraft() {
-      if (!validateInputs()) {
-        return;
-      }
-      
-      const numTeams = parseInt(document.getElementById("num_teams").value);
-      const numRounds = parseInt(document.getElementById("num_rounds").value);
-      const yourPick = parseInt(document.getElementById("your_pick").value);
-      const button = document.getElementById("simulate-btn");
-
-      const puntChecks = document.querySelectorAll("#punt_categories input[type=checkbox]:checked");
-      const puntCategories = Array.from(puntChecks).map(cb => cb.value);
-
-      button.innerHTML = '<span class="loading-spinner"></span>Simulating...';
-      button.disabled = true;
-
-      const yourTeamBody = document.querySelector("#your_team_table tbody");
-      const draftPoolBody = document.querySelector("#draft_pool_table tbody");
-      yourTeamBody.innerHTML = '<tr><td colspan="14" class="empty-state"><span class="loading-spinner"></span> Loading your team...</td></tr>';
-      draftPoolBody.innerHTML = '<tr><td colspan="14" class="empty-state"><span class="loading-spinner"></span> Analyzing draft pool...</td></tr>';
-
-      fetch('/simulate_draft', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          categories: ['PTS', 'REB', 'AST', 'STL', 'BLK', 'FG_PCT', 'FT_PCT', 'FG3M', 'TOV'],
-          invert: ['TOV'],
-          punt: puntCategories,
-          min_gp: 20,
-          user_pick: yourPick,
-          num_teams: numTeams,
-          num_rounds: numRounds
-        })
-      })
-      .then(res => res.json())
-      .then(data => {
-        button.innerHTML = 'Simulate Draft';
-        button.disabled = false;
-        
-        yourTeamBody.innerHTML = '';
-        draftPoolBody.innerHTML = '';
-
-        data.your_team.forEach((player, index) => {
-          const stats = player.stats;
-          const fgPct = stats.FGA ? (stats.FGM / stats.FGA * 100).toFixed(1) : '0.0';
-          const ftPct = stats.FTA ? (stats.FTM / stats.FTA * 100).toFixed(1) : '0.0';
-          const headshotUrl = player.player_id ? `https://cdn.nba.com/headshots/nba/latest/1040x760/${player.player_id}.png` : 'https://cdn.nba.com/logos/nba/2024/primary/0.svg';
-
-          let topDraftNum = '';
-          if (data.top_draft_pool) {
-            const poolIndex = data.top_draft_pool.findIndex(p => p.name === player.name);
-            topDraftNum = poolIndex >= 0 ? (poolIndex + 1) : '';
-          }
-
-          const row = document.createElement("tr");
-          row.innerHTML = `
-            <td class="rank-cell">${topDraftNum}</td>
-            <td style="text-align:center;"><img src="${headshotUrl}" alt="${player.name}" class="player-headshot" onerror="this.src='https://cdn.nba.com/logos/nba/2024/primary/0.svg'"></td>
-            <td class="stat-cell">${player.name}</td>
-            <td class="score-cell">${player.adjusted_z}</td>
-            <td class="stat-cell">${player.gp}</td>
-            <td class="stat-cell">${stats.PTS}</td>
-            <td class="stat-cell">${stats.REB}</td>
-            <td class="stat-cell">${stats.AST}</td>
-            <td class="stat-cell">${stats.STL}</td>
-            <td class="stat-cell">${stats.BLK}</td>
-            <td class="stat-cell">${stats.FGM}/${stats.FGA}<br>(${fgPct}%)</td>
-            <td class="stat-cell">${stats.FTM}/${stats.FTA}<br>(${ftPct}%)</td>
-            <td class="stat-cell">${stats.FG3M}</td>
-            <td class="stat-cell">${stats.TOV}</td>
-          `;
-          yourTeamBody.appendChild(row);
-        });
-
-        const maxPlayersToShow = numTeams * numRounds;
-        const playersToShow = data.top_draft_pool.slice(0, maxPlayersToShow);
-        
-        playersToShow.forEach((player, index) => {
-          const stats = player.stats;
-          const fgPct = stats.FGA ? (stats.FGM / stats.FGA * 100).toFixed(1) : '0.0';
-          const ftPct = stats.FTA ? (stats.FTM / stats.FTA * 100).toFixed(1) : '0.0';
-          const headshotUrl = player.player_id ? `https://cdn.nba.com/headshots/nba/latest/1040x760/${player.player_id}.png` : 'https://cdn.nba.com/logos/nba/2024/primary/0.svg';
-
-          const row = document.createElement("tr");
-          row.innerHTML = `
-            <td class="rank-cell">${index + 1}</td>
-            <td style="text-align:center;"><img src="${headshotUrl}" alt="${player.name}" class="player-headshot" onerror="this.src='https://cdn.nba.com/logos/nba/2024/primary/0.svg'"></td>
-            <td class="stat-cell">${player.name}</td>
-            <td class="score-cell">${player.adjusted_z}</td>
-            <td class="stat-cell">${player.gp}</td>
-            <td class="stat-cell">${stats.PTS}</td>
-            <td class="stat-cell">${stats.REB}</td>
-            <td class="stat-cell">${stats.AST}</td>
-            <td class="stat-cell">${stats.STL}</td>
-            <td class="stat-cell">${stats.BLK}</td>
-            <td class="stat-cell">${stats.FGM}/${stats.FGA}<br>(${fgPct}%)</td>
-            <td class="stat-cell">${stats.FTM}/${stats.FTA}<br>(${ftPct}%)</td>
-            <td class="stat-cell">${stats.FG3M}</td>
-            <td class="stat-cell">${stats.TOV}</td>
-          `;
-          draftPoolBody.appendChild(row);
-        });
-        
-        checkAnalyticsAvailability();
-      })
-      .catch(error => {
-        console.error('Error:', error);
-        button.innerHTML = 'Simulate Draft';
-        button.disabled = false;
-        yourTeamBody.innerHTML = '<tr><td colspan="14" class="empty-state" style="color: rgba(239, 68, 68, 0.8);">Error loading data. Please try again.</td></tr>';
-        draftPoolBody.innerHTML = '<tr><td colspan="14" class="empty-state" style="color: rgba(239, 68, 68, 0.8);">Error loading data. Please try again.</td></tr>';
-      });
-    }
+    renderHeads();
+    document.querySelector('#your_team_table tbody').innerHTML = emptyRow('Simulate a draft to see your team.');
+    document.querySelector('#draft_pool_table tbody').innerHTML = emptyRow('Simulate a draft to see the ranked pool.');
   </script>
 </body>
+
 </html>
