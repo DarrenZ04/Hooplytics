@@ -2,8 +2,8 @@ import pandas as pd
 from nba_api.stats.endpoints import leaguedashplayerstats
 from pathlib import Path
 
-# Fetch NBA player stats for 2024-25 season
-stats = leaguedashplayerstats.LeagueDashPlayerStats(season='2025-26', per_mode_detailed='PerGame')
+# Fetch NBA player per-game stats for the 2025-26 season
+stats = leaguedashplayerstats.LeagueDashPlayerStats(season='2025-26', per_mode_detailed='PerGame', timeout=60)
 df = stats.get_data_frames()[0]
 
 # Filter to NBA teams only

@@ -3,42 +3,51 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 
+import injuries
+import season_stats
+import waiver
+from fantasy import fantasy_points
+from generate_nba_data_espn import normalize
+
 app = Flask(__name__)
 
-def fetch_and_rank_players(categories, invert_categories=None, min_gp=10, punt_categories=None):
+# Per-game stats from last season (build with generate_nba_data_espn.py).
+PLAYER_DATA_FILE = 'nba_player_data_25_26.csv'
+
+# Season being drafted for: injuries are measured against the part of it still to play.
+DRAFT_SEASON_START = datetime(2026, 10, 1)
+DRAFT_SEASON_END = datetime(2027, 4, 15)
+
+def clean_scoring(value):
+    """'points' or 'categories' (the default for anything else)."""
+    return 'points' if value == 'points' else 'categories'
+
+
+def fetch_and_rank_players(categories, invert_categories=None, min_gp=10, punt_categories=None, scoring='categories'):
     # Always invert turnovers so lower is better
-    df = pd.read_csv('nba_top100_2024.csv')
+    df = pd.read_csv(PLAYER_DATA_FILE)
 
     df_filtered = df[df['GP'] >= min_gp].copy()
 
-    # Load injury data and calculate penalty
+    # Points leagues: rank by average fantasy points per game, with no z-score heuristic or injury discount
+    if scoring == 'points':
+        ranked = df_filtered[['PLAYER_NAME', 'GP']].copy()
+        ranked['ADJUSTED_Z'] = fantasy_points(df_filtered)
+        return ranked.sort_values(by='ADJUSTED_Z', ascending=False)
+
+    # Live injury report: the more of the remaining season a player will miss, the lower his value
     injury_penalty = {}
-    try:
-        inj_df = pd.read_csv('nba_injuries_full_clean.csv')
-        # NBA season: Oct 1 to Apr 15
-        season_start = datetime(2024, 10, 1)
-        season_end = datetime(2025, 4, 15)
-        season_days = (season_end - season_start).days
-        for _, row in inj_df.iterrows():
-            player = row['Player']
+    today = max(datetime.now(), DRAFT_SEASON_START)
+    season_days = (DRAFT_SEASON_END - today).days
+    if season_days > 0:
+        for key, info in injuries.get_map().items():
             try:
-                ret_date = datetime.strptime(str(row['Estimated Return Date']), '%Y-%m-%d')
-                if ret_date > season_end:
-                    fraction_missed = 1.0
-                elif ret_date < season_start:
-                    fraction_missed = 0.0
-                else:
-                    fraction_missed = (ret_date - season_start).days / season_days
-                # If missing > 80% of season, set a large negative penalty
-                if fraction_missed > 0.8:
-                    penalty = -100
-                else:
-                    penalty = -fraction_missed
-                injury_penalty[player] = penalty
-            except Exception:
+                ret_date = datetime.strptime(info['return_date'][:10], '%Y-%m-%d')
+            except ValueError:
                 continue
-    except Exception:
-        pass
+            fraction_missed = min(1.0, max(0.0, (ret_date - today).days / season_days))
+            # If missing > 80% of the remaining season, set a large negative penalty
+            injury_penalty[key] = -100 if fraction_missed > 0.8 else -fraction_missed
 
     # FG% and FT% impact scoring
     league_avg_fg_pct = df_filtered['FGM'].sum() / df_filtered['FGA'].sum()
@@ -85,11 +94,12 @@ def fetch_and_rank_players(categories, invert_categories=None, min_gp=10, punt_c
     standardized['ADJUSTED_Z'] = standardized['TOTAL_Z'] * np.power(standardized['GP'] / standardized['GP'].max(), gp_weight)
 
     # Apply injury penalty to ADJUSTED_Z
-    for player_name, penalty in injury_penalty.items():
+    names = standardized['PLAYER_NAME'].map(normalize)
+    for key, penalty in injury_penalty.items():
         if penalty == -100:
-            standardized.loc[standardized['PLAYER_NAME'] == player_name, 'ADJUSTED_Z'] += penalty
+            standardized.loc[names == key, 'ADJUSTED_Z'] += penalty
         else:
-            standardized.loc[standardized['PLAYER_NAME'] == player_name, 'ADJUSTED_Z'] *= max(0, 1 + penalty)
+            standardized.loc[names == key, 'ADJUSTED_Z'] *= max(0, 1 + penalty)
 
     return standardized.sort_values(by='ADJUSTED_Z', ascending=False)
 
@@ -107,11 +117,12 @@ def simulate_draft():
     user_pick = int(data.get('user_pick'))
     num_teams = int(data.get('num_teams'))
     num_rounds = int(data.get('num_rounds'))
-    global_ranked = fetch_and_rank_players(categories, invert, min_gp, punt_categories=None).reset_index(drop=True)
-    user_ranked = fetch_and_rank_players(categories, invert, min_gp, punt_categories=punt).reset_index(drop=True)
+    scoring = clean_scoring(data.get('scoring'))
+    global_ranked = fetch_and_rank_players(categories, invert, min_gp, punt_categories=None, scoring=scoring).reset_index(drop=True)
+    user_ranked = fetch_and_rank_players(categories, invert, min_gp, punt_categories=punt, scoring=scoring).reset_index(drop=True)
 
     # Load raw player data from CSV instead of NBA API
-    raw_df = pd.read_csv('nba_top100_2024.csv')
+    raw_df = pd.read_csv(PLAYER_DATA_FILE)
     # If PLAYER_ID is present, keep it; otherwise, drop or fill as needed
     columns_needed = ['PLAYER_NAME', 'PTS', 'REB', 'AST', 'STL', 'BLK', 'FGM', 'FGA', 'FTM', 'FTA', 'FG3M', 'TOV']
     if 'PLAYER_ID' in raw_df.columns:
@@ -158,7 +169,8 @@ def simulate_draft():
             'player_id': player_id,
             'adjusted_z': round(user_score, 2),
             'gp': int(player['GP']),
-            'stats': {k: round(v, 1) for k, v in raw_stats.items() if k not in ['PLAYER_NAME', 'PLAYER_ID']}
+            'stats': {k: round(v, 1) for k, v in raw_stats.items() if k not in ['PLAYER_NAME', 'PLAYER_ID']},
+            'injury': injuries.lookup(player_name)
         })
 
     user_team = team_rosters[user_pick - 1]
@@ -173,7 +185,8 @@ def simulate_draft():
             'player_id': player_id,
             'adjusted_z': round(player['ADJUSTED_Z'], 2),
             'gp': int(player['GP']),
-            'stats': {k: round(v, 1) for k, v in raw_stats.items() if k not in ['PLAYER_NAME', 'PLAYER_ID']}
+            'stats': {k: round(v, 1) for k, v in raw_stats.items() if k not in ['PLAYER_NAME', 'PLAYER_ID']},
+            'injury': injuries.lookup(player['PLAYER_NAME'])
         })
 
     return jsonify({
@@ -193,11 +206,12 @@ def team_analytics():
     num_rounds = int(data.get('num_rounds'))
     
     # Get the user's team from the draft simulation
-    global_ranked = fetch_and_rank_players(categories, invert, min_gp, punt_categories=None).reset_index(drop=True)
-    user_ranked = fetch_and_rank_players(categories, invert, min_gp, punt_categories=punt).reset_index(drop=True)
+    scoring = clean_scoring(data.get('scoring'))
+    global_ranked = fetch_and_rank_players(categories, invert, min_gp, punt_categories=None, scoring=scoring).reset_index(drop=True)
+    user_ranked = fetch_and_rank_players(categories, invert, min_gp, punt_categories=punt, scoring=scoring).reset_index(drop=True)
     
     # Load raw player data
-    raw_df = pd.read_csv('nba_top100_2024.csv')
+    raw_df = pd.read_csv(PLAYER_DATA_FILE)
     columns_needed = ['PLAYER_NAME', 'PTS', 'REB', 'AST', 'STL', 'BLK', 'FGM', 'FGA', 'FTM', 'FTA', 'FG3M', 'TOV']
     if 'PLAYER_ID' in raw_df.columns:
         columns_needed = ['PLAYER_NAME', 'PLAYER_ID'] + columns_needed[1:]
@@ -288,6 +302,32 @@ def team_analytics():
         'league_averages': league_averages,
         'stat_categories': stat_categories + ['FG_PCT', 'FT_PCT']
     })
+
+@app.route('/season/stats')
+def season_stats_route():
+    """Per-game averages for the current season, scored and ranked."""
+    try:
+        data = season_stats.payload(
+            min_gp=request.args.get('min_gp', type=int),
+            refresh=request.args.get('refresh') == '1',            scoring=clean_scoring(request.args.get('scoring')),
+        )
+    except Exception:
+        app.logger.exception('could not load current season stats')
+        return jsonify({'error': 'Could not load current season stats.'}), 502
+    return jsonify(data)
+
+@app.route('/season/waiver')
+def season_waiver_route():
+    """Pickup candidates outside the top 110 who are trending up in minutes and production."""
+    try:
+        data = waiver.payload(
+            window=request.args.get('window', default=waiver.DEFAULT_WINDOW, type=int),
+            refresh=request.args.get('refresh') == '1',            scoring=clean_scoring(request.args.get('scoring')),
+        )
+    except Exception:
+        app.logger.exception('could not build waiver wire list')
+        return jsonify({'error': 'Could not load waiver wire help.'}), 502
+    return jsonify(data)
 
 if __name__ == '__main__':
     app.run(debug=True)

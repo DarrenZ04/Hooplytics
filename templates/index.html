@@ -5,12 +5,13 @@
   <meta charset="utf-8">
   <title>Hooplytics</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0B0C0E">
   <meta name="description" content="Simulate a fantasy basketball snake draft and see which players your category strategy picks.">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23FBFAF6'/%3E%3Ccircle cx='16' cy='16' r='9' fill='%231B44E0'/%3E%3C/svg%3E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230B0C0E'/%3E%3Crect x='8' y='8' width='16' height='16' rx='3' fill='%23D4FF3A'/%3E%3C/svg%3E">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
   <style>
     *, *::before, *::after {
@@ -20,39 +21,47 @@
     }
 
     :root {
-      color-scheme: light;
+      color-scheme: dark;
 
-      --paper: #FBFAF6;
-      --paper-2: #F3F1E8;
-      --ink: #17150F;
-      --muted: #6A665C;
-      --line: #E5E1D6;
-      --line-strong: #CFCABA;
+      --bg: #0B0C0E;
+      --surface: #131418;
+      --surface-2: #1B1D22;
+      --line: #25272D;
+      --line-strong: #363942;
+      --ink: #F3F2ED;
+      --muted: #9B9DA6;
 
-      --accent: #1B44E0;
-      --accent-hover: #1638BE;
-      --accent-rgb: 27, 68, 224;
-      --good: #0A7D59;
-      --bad: #C63A22;
+      --accent: #D4FF3A;
+      --accent-rgb: 212, 255, 58;
+      --accent-ink: #0B0C0E;
+      --bad: #FF6B5B;
 
-      --font-display: 'Bricolage Grotesque', system-ui, -apple-system, 'Segoe UI', sans-serif;
-      --font-text: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      --font-display: 'Big Shoulders Display', 'Arial Narrow', Impact, sans-serif;
+      --font-text: 'Geist', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', Consolas, monospace;
 
-      --radius: 6px;
+      /* one radius scale: large surfaces, small controls */
+      --r: 10px;
+      --r-sm: 6px;
+
       --ease: cubic-bezier(0.16, 1, 0.3, 1);
-      --wrap: 72rem;
-      --bar-h: 3.5rem;
+      --wrap: 80rem;
+      --bar-h: 4rem;
     }
+
+    html { -webkit-text-size-adjust: 100%; }
 
     body {
       min-height: 100dvh;
-      background: var(--paper);
+      background: var(--bg);
       color: var(--ink);
       font-family: var(--font-text);
-      font-size: 0.9375rem;
+      font-size: 1rem;
       line-height: 1.55;
       -webkit-font-smoothing: antialiased;
     }
+
+    body.is-locked { overflow: hidden; }
 
     button, input {
       font: inherit;
@@ -63,8 +72,10 @@
 
     :focus-visible {
       outline: 2px solid var(--accent);
-      outline-offset: 2px;
+      outline-offset: 3px;
     }
+
+    ::selection { background: var(--accent); color: var(--accent-ink); }
 
     h1, h2, h3 { text-wrap: balance; }
     p { text-wrap: pretty; }
@@ -79,45 +90,77 @@
       position: fixed;
       top: 0.75rem;
       left: 0.75rem;
-      z-index: 60;
+      z-index: 90;
       padding: 0.5rem 0.875rem;
       background: var(--accent);
-      color: #fff;
+      color: var(--accent-ink);
       font-size: 0.8125rem;
+      font-weight: 600;
       text-decoration: none;
+      border-radius: var(--r-sm);
       transform: translateY(-160%);
       transition: transform 0.2s var(--ease);
     }
 
     .skip-link:focus-visible { transform: translateY(0); }
 
+    /* ─── Entrance motion ─── */
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(1.25rem); }
+      to { opacity: 1; transform: none; }
+    }
+
+    .rise {
+      animation: rise 0.9s var(--ease) backwards;
+      animation-delay: calc(var(--d, 0) * 90ms + 80ms);
+    }
+
     /* ─── Top bar ─── */
     .topbar {
       position: sticky;
       top: 0;
       z-index: 50;
-      background: var(--paper);
+      background: rgba(11, 12, 14, 0.86);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--line);
+    }
+
+    @media (prefers-reduced-transparency: reduce) {
+      .topbar { background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none; }
     }
 
     .topbar__row {
       display: flex;
-      align-items: center;
-      gap: 2rem;
+      align-items: stretch;
+      gap: clamp(1.25rem, 4vw, 3rem);
       min-height: var(--bar-h);
     }
 
     .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
       font-family: var(--font-display);
-      font-size: 1.375rem;
-      font-weight: 800;
-      letter-spacing: -0.04em;
+      font-size: 1.75rem;
+      font-weight: 900;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
       line-height: 1;
     }
 
+    .brand::before {
+      content: "";
+      width: 0.7rem;
+      height: 0.7rem;
+      border-radius: 2px;
+      background: var(--accent);
+      transform: rotate(45deg);
+    }
+
     .tabs {
+      position: relative;
       display: flex;
-      align-self: stretch;
       gap: 0.25rem;
       overflow-x: auto;
       scrollbar-width: none;
@@ -126,113 +169,187 @@
     .tabs::-webkit-scrollbar { display: none; }
 
     .tab {
-      position: relative;
-      padding: 0 0.875rem;
+      padding: 0 1rem;
       background: none;
       border: 0;
       color: var(--muted);
       font-weight: 500;
       white-space: nowrap;
       cursor: pointer;
-      transition: color 0.15s;
-    }
-
-    .tab::after {
-      content: "";
-      position: absolute;
-      left: 0.875rem;
-      right: 0.875rem;
-      bottom: -1px;
-      height: 2px;
-      background: var(--accent);
-      transform: scaleX(0);
-      transition: transform 0.2s var(--ease);
+      transition: color 0.2s;
     }
 
     .tab:hover { color: var(--ink); }
+    .tab[aria-selected="true"] { color: var(--ink); }
 
-    .tab[aria-selected="true"] {
-      color: var(--ink);
-      font-weight: 600;
+    .tab-indicator {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      height: 3px;
+      width: 0;
+      background: var(--accent);
+      transition: transform 0.45s var(--ease), width 0.45s var(--ease);
+      pointer-events: none;
     }
-
-    .tab[aria-selected="true"]::after { transform: scaleX(1); }
 
     /* ─── Panels ─── */
     main.wrap {
-      padding-block: clamp(1.75rem, 5vw, 3.5rem) 4rem;
+      padding-block: clamp(1.75rem, 5vw, 3.5rem) 5rem;
     }
 
     .panel[hidden] { display: none; }
 
-    h2 {
+    @keyframes panel-in {
+      from { opacity: 0; transform: translateY(0.75rem); }
+      to { opacity: 1; transform: none; }
+    }
+
+    .panel:not([hidden]) { animation: panel-in 0.55s var(--ease); }
+
+    .display {
       font-family: var(--font-display);
-      font-size: clamp(1.75rem, 4vw, 2.5rem);
-      font-weight: 700;
-      line-height: 1.05;
-      letter-spacing: -0.035em;
+      font-weight: 900;
+      text-transform: uppercase;
+      line-height: 0.88;
+      letter-spacing: -0.005em;
+    }
+
+    h2.section-title {
+      font-size: clamp(2.75rem, 7vw, 5.5rem);
     }
 
     .lede {
-      margin-top: 0.75rem;
-      max-width: 60ch;
+      margin-top: 1.25rem;
+      max-width: 44ch;
       color: var(--muted);
+      font-size: 1.0625rem;
     }
 
-    /* ─── Setup form ─── */
-    .setup {
+    .accent { color: var(--accent); }
+
+    /* ─── Setup ─── */
+    .hero {
       display: grid;
-      grid-template-columns: minmax(0, 18rem) minmax(0, 1fr);
-      column-gap: clamp(2rem, 6vw, 5rem);
-      row-gap: 2rem;
-      margin-top: 2.25rem;
-      padding-top: 2rem;
-      border-top: 1px solid var(--line);
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+      gap: clamp(2rem, 6vw, 5.5rem);
+      align-items: start;
+      padding-top: clamp(0.5rem, 3vw, 2rem);
+    }
+
+    .hero h2 {
+      font-size: clamp(3.5rem, 8vw, 7.25rem);
+    }
+
+    .hero h2 span { display: block; }
+
+    .picks {
+      margin-top: 2.5rem;
+      max-width: 40rem;
+    }
+
+    .picks__title {
+      margin-bottom: 0.75rem;
+      color: var(--muted);
+      font-size: 0.875rem;
+    }
+
+    .picks__list {
+      display: flex;
+      gap: 0.5rem;
+      list-style: none;
+      overflow-x: auto;
+      padding-bottom: 0.5rem;
+      scrollbar-width: thin;
+      scrollbar-color: var(--line-strong) transparent;
+    }
+
+    .picks__list li {
+      flex: none;
+      min-width: 3.75rem;
+      padding: 0.5rem 0.75rem;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--r-sm);
+      text-align: center;
+      animation: rise 0.5s var(--ease) backwards;
+      animation-delay: calc(var(--k) * 28ms);
+    }
+
+    .picks__list small {
+      display: block;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 0.6875rem;
+    }
+
+    .picks__list b {
+      font-family: var(--font-mono);
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    .picks__list li:first-child { border-color: var(--accent); }
+    .picks__list li:first-child b { color: var(--accent); }
+
+    .console {
+      padding: clamp(1.25rem, 3vw, 1.75rem);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--r);
+      display: grid;
+      gap: 1.5rem;
     }
 
     .fields {
       display: grid;
-      gap: 1.25rem;
-      align-content: start;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.75rem;
     }
 
     .field label,
     .punt legend {
       display: block;
-      margin-bottom: 0.375rem;
-      font-weight: 600;
+      margin-bottom: 0.4rem;
+      color: var(--muted);
+      font-size: 0.8125rem;
+      font-weight: 500;
     }
 
     .field input {
       width: 100%;
-      padding: 0.6rem 0.75rem;
-      background: #fff;
+      padding: 0.5rem 0.75rem;
+      background: var(--bg);
       border: 1px solid var(--line-strong);
-      border-radius: var(--radius);
-      font-variant-numeric: tabular-nums;
-      transition: border-color 0.15s;
+      border-radius: var(--r-sm);
+      font-family: var(--font-mono);
+      font-size: 1.75rem;
+      font-weight: 500;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
 
-    .field input:hover { border-color: var(--ink); }
+    .field input:hover { border-color: var(--muted); }
+
+    .field input:focus-visible {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.18);
+    }
 
     .hint {
-      margin-top: 0.375rem;
+      margin-top: 0.4rem;
       color: var(--muted);
       font-size: 0.8125rem;
     }
 
-    .punt {
-      border: 0;
-      min-width: 0;
-    }
-
+    .punt { border: 0; min-width: 0; }
     .punt legend { padding: 0; }
 
     .chips {
       display: flex;
       flex-wrap: wrap;
       gap: 0.5rem;
-      margin-top: 0.875rem;
+      margin-top: 0.75rem;
     }
 
     .chip { position: relative; }
@@ -246,19 +363,22 @@
 
     .chip span {
       display: block;
-      padding: 0.45rem 0.9rem;
+      padding: 0.4rem 0.8rem;
       border: 1px solid var(--line-strong);
-      border-radius: var(--radius);
-      background: #fff;
-      transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+      border-radius: var(--r-sm);
+      background: var(--bg);
+      font-size: 0.9375rem;
+      transition: background-color 0.2s, border-color 0.2s, color 0.2s, transform 0.2s var(--ease);
     }
 
-    .chip:hover span { border-color: var(--ink); }
+    .chip:hover span { border-color: var(--muted); }
+    .chip:active span { transform: scale(0.96); }
 
     .chip input:checked + span {
       background: var(--accent);
       border-color: var(--accent);
-      color: #fff;
+      color: var(--accent-ink);
+      font-weight: 600;
     }
 
     .chip input:focus-visible + span {
@@ -266,123 +386,298 @@
       outline-offset: 2px;
     }
 
-    .actions {
-      grid-column: 1 / -1;
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
-
     .btn {
-      padding: 0.7rem 1.25rem;
+      padding: 0.9rem 1.5rem;
       border: 1px solid transparent;
-      border-radius: var(--radius);
-      font-weight: 500;
+      border-radius: var(--r-sm);
+      font-weight: 600;
       white-space: nowrap;
       cursor: pointer;
-      transition: background-color 0.15s, transform 0.1s;
+      transition: background-color 0.2s, border-color 0.2s, transform 0.15s var(--ease);
     }
 
-    .btn:active:not(:disabled) { transform: translateY(1px); }
+    .btn:active:not(:disabled) { transform: translateY(1px) scale(0.99); }
 
     .btn--primary {
       background: var(--accent);
-      color: #fff;
+      color: var(--accent-ink);
+      font-size: 1.0625rem;
     }
 
-    .btn--primary:hover:not(:disabled) { background: var(--accent-hover); }
+    .btn--primary:hover:not(:disabled) { background: #E4FF7A; }
 
-    .btn:disabled {
-      opacity: 0.55;
-      cursor: not-allowed;
+    .btn--ghost {
+      background: transparent;
+      border-color: var(--line-strong);
     }
+
+    .btn--ghost:hover:not(:disabled) { border-color: var(--ink); }
+
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; }
 
     .form-error {
       color: var(--bad);
       font-size: 0.875rem;
     }
 
-    /* ─── Tables ─── */
-    .table-head {
-      margin-bottom: 1.5rem;
+    /* ─── Your team ─── */
+    .summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1px;
+      margin-top: 2rem;
+      background: var(--line);
+      border: 1px solid var(--line);
+      border-radius: var(--r);
+      overflow: hidden;
     }
 
+    .summary div {
+      flex: 1 1 9rem;
+      padding: 1rem 1.25rem;
+      background: var(--surface);
+    }
+
+    .summary dt {
+      color: var(--muted);
+      font-size: 0.8125rem;
+    }
+
+    .summary dd {
+      font-family: var(--font-mono);
+      font-size: 1.75rem;
+      font-weight: 500;
+      line-height: 1.3;
+    }
+
+    .summary .total dd { color: var(--accent); }
+
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    @keyframes card-in {
+      from { opacity: 0; transform: translateY(1.75rem) scale(0.97); }
+      to { opacity: 1; transform: none; }
+    }
+
+    .card {
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+      overflow: hidden;
+      text-align: left;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--r);
+      cursor: pointer;
+      animation: card-in 0.7s var(--ease) backwards;
+      animation-delay: calc(var(--i) * 60ms);
+      transition: transform 0.4s var(--ease), border-color 0.25s, background-color 0.25s;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      border-color: var(--accent);
+      background: var(--surface-2);
+    }
+
+    .card:active { transform: translateY(-2px) scale(0.99); }
+
+    .card__top {
+      position: relative;
+      display: block;
+      aspect-ratio: 1 / 0.88;
+    }
+
+    .card__photo {
+      display: block;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--surface-2);
+      --zoom: 1.35;
+    }
+
+    .card__tag {
+      position: absolute;
+      top: 0.625rem;
+      left: 0.625rem;
+      z-index: 1;
+      padding: 0.15rem 0.5rem;
+      background: var(--accent);
+      color: var(--accent-ink);
+      border-radius: var(--r-sm);
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .card__body {
+      display: grid;
+      gap: 0.75rem;
+      padding: 1rem 1.125rem 1.125rem;
+    }
+
+    .card__name {
+      font-family: var(--font-display);
+      font-size: 1.75rem;
+      font-weight: 800;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+
+    .card__score {
+      display: flex;
+      align-items: baseline;
+      gap: 0.5rem;
+    }
+
+    .card__score b {
+      color: var(--accent);
+      font-family: var(--font-mono);
+      font-size: 2.25rem;
+      font-weight: 500;
+      line-height: 1;
+    }
+
+    .card__score small,
+    .card dt {
+      color: var(--muted);
+      font-size: 0.75rem;
+    }
+
+    .card__stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--line);
+    }
+
+    .card dd {
+      font-family: var(--font-mono);
+      font-size: 1.25rem;
+      font-weight: 500;
+    }
+
+    /* headshots: 1040x760 landscape, cover-fit then zoom onto head and shoulders */
+    [data-photo] img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: 50% 20%;
+      transform: scale(var(--zoom, 1.5));
+      transform-origin: 50% 24%;
+      transition: transform 0.6s var(--ease);
+    }
+
+    .card:hover [data-photo] img { transform: scale(calc(var(--zoom, 1.5) + 0.06)); }
+
+    [data-photo].is-initials {
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-family: var(--font-display);
+      font-size: 2.5rem;
+      font-weight: 800;
+    }
+
+    /* ─── Tables ─── */
+    /* Wide screens: the page scrolls and the column headers stick under the top bar.
+       Narrow screens (see the media query at the end): the table scrolls in its own box. */
     .table-wrap {
-      overflow-x: auto;
+      margin-top: 2rem;
       border-top: 1px solid var(--line-strong);
     }
 
     table {
       width: 100%;
-      min-width: 52rem;
-      border-collapse: collapse;
+      min-width: 58rem;
+      border-collapse: separate;
+      border-spacing: 0;
       font-variant-numeric: tabular-nums;
     }
 
     th, td {
-      padding: 0.5rem 0.75rem;
+      padding: 1rem 0.625rem;
       text-align: right;
       border-bottom: 1px solid var(--line);
       white-space: nowrap;
     }
 
     th {
-      padding-block: 0.65rem;
+      position: sticky;
+      top: var(--topbar-h, 65px);
+      z-index: 5;
+      padding-block: 0.75rem;
+      background: var(--bg);
       color: var(--muted);
-      font-size: 0.8125rem;
-      font-weight: 600;
+      font-size: 0.9375rem;
+      font-weight: 500;
       border-bottom-color: var(--line-strong);
     }
 
-    th.l, td.l { text-align: left; }
+    td.n {
+      font-family: var(--font-mono);
+      font-size: 1.125rem;
+    }
 
-    td.rank { color: var(--muted); width: 3rem; }
+    th.l, td.l { text-align: left; }
+    td.rank { color: var(--muted); width: 3.5rem; }
 
     td.score {
       color: var(--accent);
-      font-weight: 600;
+      font-size: 1.375rem;
+      font-weight: 500;
     }
 
     td small {
       display: block;
       color: var(--muted);
-      font-size: 0.75rem;
-      line-height: 1.2;
+      font-size: 0.8125rem;
+      line-height: 1.25;
     }
 
-    tbody tr:hover { background: var(--paper-2); }
+    tbody tr { transition: background-color 0.2s; }
+    tbody tr:hover { background: var(--surface); }
 
+    tbody tr.is-mine { background: rgba(var(--accent-rgb), 0.07); }
     tbody tr.is-mine td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
-    tbody tr.is-mine { background: rgba(var(--accent-rgb), 0.06); }
+
+    tr.reveal {
+      opacity: 0;
+      transform: translateY(0.75rem);
+      transition: opacity 0.5s var(--ease), transform 0.5s var(--ease), background-color 0.2s;
+    }
+
+    tr.reveal.in { opacity: 1; transform: none; }
 
     .player {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
+      gap: 1rem;
+      font-size: 1.1875rem;
       font-weight: 500;
     }
 
     .avatar {
       flex: none;
-      width: 2.25rem;
-      height: 2.25rem;
-      border-radius: 50%;
-      background: var(--paper-2);
-      border: 1px solid var(--line);
-      object-fit: cover;
-      object-position: 50% 12%;
+      width: 4.75rem;
+      height: 4.75rem;
+      overflow: hidden;
+      border-radius: var(--r-sm);
+      background: var(--surface-2);
+      --zoom: 1.5;
     }
 
-    .avatar--initials {
-      display: grid;
-      place-items: center;
-      color: var(--muted);
-      font-size: 0.75rem;
-      font-weight: 600;
-    }
+    .avatar.is-initials { font-size: 1.5rem; }
 
     .empty td {
-      padding: 3rem 0.75rem;
+      padding: 3.5rem 0.75rem;
       text-align: center;
       color: var(--muted);
       white-space: normal;
@@ -393,45 +688,23 @@
     .skel {
       display: block;
       width: 100%;
-      height: 0.75rem;
+      height: 0.875rem;
       border-radius: 3px;
-      background: linear-gradient(90deg, var(--paper-2), var(--line), var(--paper-2));
+      background: linear-gradient(90deg, var(--surface), var(--line), var(--surface));
+      background-size: 200% 100%;
+      animation: shimmer 1.4s linear infinite;
+    }
+
+    .card--skel {
+      aspect-ratio: 3 / 4.4;
+      border-radius: var(--r);
+      border: 1px solid var(--line);
+      background: linear-gradient(90deg, var(--surface), var(--surface-2), var(--surface));
       background-size: 200% 100%;
       animation: shimmer 1.4s linear infinite;
     }
 
     @keyframes shimmer { to { background-position: -200% 0; } }
-
-    /* ─── Analytics ─── */
-    .analytics-actions {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      margin-top: 1.5rem;
-    }
-
-    .charts {
-      display: grid;
-      gap: 2.5rem;
-      margin-top: 2rem;
-    }
-
-    .chart h3 {
-      margin-bottom: 0.25rem;
-      font-family: var(--font-display);
-      font-size: 1.25rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-    }
-
-    .chart .hint { margin: 0 0 1rem; }
-
-    .chart__box {
-      position: relative;
-      height: 20rem;
-      padding-top: 1rem;
-      border-top: 1px solid var(--line-strong);
-    }
 
     .notice {
       margin-top: 2rem;
@@ -442,23 +715,664 @@
     }
 
     .notice strong { color: var(--ink); }
+    .notice .btn { margin-top: 1rem; }
+
+    /* ─── Analytics ─── */
+    .analytics-actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-top: 1.75rem;
+    }
+
+    .charts {
+      display: grid;
+      gap: 3rem;
+      margin-top: 2.5rem;
+    }
+
+    .chart h3 {
+      font-family: var(--font-display);
+      font-size: 1.875rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+
+    .chart .hint { margin: 0.5rem 0 1rem; }
+
+    .chart__box {
+      position: relative;
+      height: 21rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--line-strong);
+    }
+
+    /* ─── Player dialog ─── */
+    dialog.pd {
+      margin: auto;
+      width: min(58rem, calc(100vw - 1.5rem));
+      max-width: none;
+      max-height: calc(100dvh - 1.5rem);
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      overflow: visible;
+    }
+
+    dialog.pd:focus-visible,
+    .pd__panel:focus-visible { outline: none; }
+
+    dialog.pd::backdrop {
+      background: rgba(5, 6, 7, 0.78);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      animation: fade 0.35s ease;
+    }
+
+    @keyframes fade { from { opacity: 0; } }
+
+    .pd__panel {
+      max-height: calc(100dvh - 1.5rem);
+      overflow-y: auto;
+      background: var(--surface);
+      border: 1px solid var(--line-strong);
+      border-radius: var(--r);
+    }
+
+    dialog.pd.fx[open] .pd__panel { animation: card-in 0.55s var(--ease); }
+
+    .pd__top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.875rem 1.25rem;
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 0.875rem;
+    }
+
+    .pd__body { padding: clamp(1.25rem, 3vw, 2rem); }
+
+    @keyframes slide-next { from { opacity: 0; transform: translateX(1.5rem); } }
+    @keyframes slide-prev { from { opacity: 0; transform: translateX(-1.5rem); } }
+
+    .pd__body.to-next { animation: slide-next 0.45s var(--ease); }
+    .pd__body.to-prev { animation: slide-prev 0.45s var(--ease); }
+
+    .pd__head {
+      display: grid;
+      grid-template-columns: 14rem minmax(0, 1fr);
+      gap: clamp(1.25rem, 3vw, 2.25rem);
+      align-items: end;
+    }
+
+    .pd__photo {
+      aspect-ratio: 1;
+      overflow: hidden;
+      border-radius: var(--r-sm);
+      background: var(--surface-2);
+      --zoom: 1.35;
+    }
+
+    .pd__meta {
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 0.875rem;
+    }
+
+    .pd__name {
+      margin-top: 0.5rem;
+      font-size: clamp(2.5rem, 6vw, 4.25rem);
+    }
+
+    .pd__score {
+      display: flex;
+      align-items: baseline;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+
+    .pd__score b {
+      color: var(--accent);
+      font-family: var(--font-mono);
+      font-size: clamp(2.75rem, 7vw, 4.5rem);
+      font-weight: 500;
+      line-height: 1;
+    }
+
+    .pd__score small { color: var(--muted); }
+
+    .pd__facts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 1.75rem;
+      margin-top: 1rem;
+      list-style: none;
+      color: var(--muted);
+      font-size: 0.9375rem;
+    }
+
+    .pd__facts b {
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-weight: 500;
+    }
+
+    .pd__stats {
+      display: grid;
+      margin-top: 2rem;
+      border-top: 1px solid var(--line-strong);
+    }
+
+    .stat {
+      display: grid;
+      grid-template-columns: 6.5rem 8rem minmax(0, 1fr) 7.5rem;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .stat__label { color: var(--muted); }
+
+    .stat__value {
+      font-family: var(--font-mono);
+      font-size: 1.375rem;
+      font-weight: 500;
+      line-height: 1.15;
+    }
+
+    .stat__value small {
+      display: block;
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-weight: 400;
+    }
+
+    .bar {
+      height: 8px;
+      border-radius: 4px;
+      background: var(--surface-2);
+      overflow: hidden;
+    }
+
+    .bar i {
+      display: block;
+      height: 100%;
+      width: var(--w);
+      border-radius: 4px;
+      background: var(--accent);
+      transform-origin: left;
+      animation: bar-in 0.9s var(--ease) backwards;
+      animation-delay: calc(var(--k) * 55ms + 150ms);
+    }
+
+    @keyframes bar-in { from { transform: scaleX(0); } }
+
+    .pd__legend { margin-top: 1.5rem; max-width: 62ch; }
+
+    .stat__pct {
+      text-align: right;
+      font-family: var(--font-mono);
+      font-size: 0.9375rem;
+    }
+
+    .stat__pct small {
+      display: block;
+      color: var(--muted);
+      font-size: 0.75rem;
+    }
+
+    .pd__nav {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1rem clamp(1.25rem, 3vw, 2rem) 1.5rem;
+    }
+
+    /* shared-element transition: card grows into the dialog */
+    ::view-transition-group(player) {
+      animation-duration: 0.55s;
+      animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    ::view-transition-old(root),
+    ::view-transition-new(root) { animation: none; }
+
+    /* ─── Mode switch ─── */
+    .tabs[hidden] { display: none; }
+
+    .modes {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      align-self: center;
+      padding: 3px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--r-sm);
+    }
+
+    .mode {
+      position: relative;
+      z-index: 1;
+      padding: 0.45rem 1rem;
+      background: none;
+      border: 0;
+      border-radius: 4px;
+      color: var(--muted);
+      font-weight: 500;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: color 0.25s;
+    }
+
+    .mode:hover { color: var(--ink); }
+
+    .mode[aria-pressed="true"] {
+      color: var(--accent-ink);
+      font-weight: 600;
+    }
+
+    .mode-indicator {
+      position: absolute;
+      top: 3px;
+      bottom: 3px;
+      left: 3px;
+      width: calc(50% - 3px);
+      background: var(--accent);
+      border-radius: 4px;
+      transition: transform 0.45s var(--ease);
+    }
+
+    .modes[data-mode="season"] .mode-indicator { transform: translateX(100%); }
+
+    /* ─── Season tracker ─── */
+    .season-status {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem 1rem;
+      margin-top: 1.5rem;
+      color: var(--muted);
+      font-size: 0.9375rem;
+    }
+
+    .season-status b { color: var(--ink); font-weight: 500; }
+
+    .season-status .btn {
+      padding: 0.3rem 0.8rem;
+      font-size: 0.875rem;
+    }
+
+    .adder {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      gap: 0.75rem;
+      max-width: 40rem;
+      margin-top: 1.75rem;
+    }
+
+    .adder .field { flex: 1 1 16rem; }
+
+    .adder .field input {
+      font-family: var(--font-text);
+      font-size: 1.125rem;
+    }
+
+    .adder .btn { padding: 0.8rem 1.4rem; }
+
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      gap: 1.25rem 2.5rem;
+      margin-top: 1.75rem;
+    }
+
+    .filters .field { width: 11rem; }
+
+    .cell {
+      position: relative;
+      display: flex;
+    }
+
+    .cell > .card { flex: 1; width: 100%; }
+
+    .card__remove {
+      position: absolute;
+      top: 0.625rem;
+      right: 0.625rem;
+      z-index: 2;
+      padding: 0.2rem 0.65rem;
+      background: rgba(11, 12, 14, 0.82);
+      color: var(--ink);
+      border: 1px solid var(--line-strong);
+      border-radius: var(--r-sm);
+      font-size: 0.75rem;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.2s, border-color 0.2s, color 0.2s;
+    }
+
+    .cell:hover .card__remove,
+    .card:focus-visible + .card__remove,
+    .card__remove:focus-visible { opacity: 1; }
+
+    @media (hover: none) {
+      .card__remove { opacity: 1; }
+    }
+
+    .card__remove:hover {
+      border-color: var(--bad);
+      color: var(--bad);
+    }
+
+    .card__meta {
+      margin-top: -0.4rem;
+      color: var(--muted);
+      font-size: 0.8125rem;
+    }
+
+    .card--empty {
+      justify-content: center;
+      min-height: 12rem;
+      padding: 1.25rem;
+      cursor: default;
+      animation: card-in 0.7s var(--ease) backwards;
+    }
+
+    .card--empty:hover {
+      transform: none;
+      border-color: var(--line);
+      background: var(--surface);
+    }
+
+    .card--empty p { color: var(--muted); font-size: 0.9375rem; }
+
+    .card--empty .card__name { margin-bottom: 0.5rem; }
+
+    /* ─── Injury tags ─── */
+    .inj {
+      display: inline-block;
+      margin-left: 0.5rem;
+      padding: 0.05rem 0.4rem;
+      border: 1px solid var(--bad);
+      border-radius: 4px;
+      background: rgba(255, 107, 91, 0.12);
+      color: var(--bad);
+      font-family: var(--font-mono);
+      font-size: 0.6875rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      line-height: 1.4;
+      text-transform: none;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    .inj--out {
+      background: var(--bad);
+      color: var(--accent-ink);
+    }
+
+    .pd__name .inj {
+      margin-left: 0.75rem;
+      font-size: 0.875rem;
+    }
+
+    .pd__injury {
+      margin-top: 1rem;
+      padding: 0.6rem 0.9rem;
+      border-left: 3px solid var(--bad);
+      border-radius: 0 var(--r-sm) var(--r-sm) 0;
+      background: rgba(255, 107, 91, 0.08);
+      font-size: 0.9375rem;
+    }
+
+    .pd__injury b {
+      margin-right: 0.4rem;
+      color: var(--bad);
+      font-weight: 600;
+    }
+
+    .pd__injury small {
+      display: block;
+      margin-top: 0.25rem;
+      color: var(--muted);
+      font-size: 0.8125rem;
+    }
+
+    /* ─── Waiver wire ─── */
+    td small.up { color: var(--accent); }
+    td small.down { color: var(--bad); }
+
+    /* ─── Scoring switch ─── */
+    .scoring {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem 1rem;
+    }
+
+    .scoring__label {
+      color: var(--muted);
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    .scoring__hint {
+      flex-basis: 100%;
+      color: var(--muted);
+      font-size: 0.8125rem;
+    }
+
+    .seg {
+      display: inline-grid;
+      grid-auto-flow: column;
+      padding: 3px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--r-sm);
+    }
+
+    .seg__btn {
+      padding: 0.4rem 0.9rem;
+      background: none;
+      border: 0;
+      border-radius: 4px;
+      color: var(--muted);
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.25s, color 0.25s;
+    }
+
+    .seg__btn:hover { color: var(--ink); }
+
+    .seg__btn[aria-pressed="true"] {
+      background: var(--accent);
+      color: var(--accent-ink);
+      font-weight: 600;
+    }
+
+    .scoring-bar { margin-top: 1.5rem; }
+    .scoring-bar + .season-status { margin-top: 1rem; }
+
+    .stale {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75rem 1rem;
+      padding: 1rem 0;
+    }
+
+    .stale[hidden] { display: none; }
+    .stale .btn { padding: 0.35rem 0.9rem; font-size: 0.875rem; }
+
+    /* ─── Clickable table rows ─── */
+    tbody tr[data-i] { cursor: pointer; }
+
+    .rowlink {
+      padding: 0;
+      background: none;
+      border: 0;
+      color: inherit;
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .rowlink:hover {
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    /* ─── Player picker ─── */
+    .picker { position: relative; }
+
+    .picker__list {
+      position: absolute;
+      top: calc(100% + 0.375rem);
+      left: 0;
+      right: 0;
+      z-index: 30;
+      max-height: 19.5rem;
+      padding: 0.25rem;
+      overflow-y: auto;
+      list-style: none;
+      background: var(--surface);
+      border: 1px solid var(--line-strong);
+      border-radius: var(--r);
+      box-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.85);
+      scrollbar-width: thin;
+      scrollbar-color: var(--line-strong) transparent;
+    }
+
+    .picker__list[hidden] { display: none; }
+
+    .opt {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.375rem 0.5rem;
+      border-radius: var(--r-sm);
+      cursor: pointer;
+    }
+
+    .opt[aria-selected="true"] {
+      background: var(--surface-2);
+      box-shadow: inset 3px 0 0 var(--accent);
+    }
+
+    .opt__photo {
+      flex: none;
+      width: 2.5rem;
+      height: 2.5rem;
+      overflow: hidden;
+      border-radius: 4px;
+      background: var(--surface-2);
+      --zoom: 1.5;
+    }
+
+    .opt__photo.is-initials { font-size: 0.9375rem; }
+
+    .opt__text {
+      display: grid;
+      min-width: 0;
+      line-height: 1.25;
+    }
+
+    .opt__name { font-weight: 500; }
+
+    .opt small {
+      color: var(--muted);
+      font-size: 0.75rem;
+    }
+
+    .opt--note {
+      padding: 0.75rem;
+      color: var(--muted);
+      cursor: default;
+    }
 
     /* ─── Responsive ─── */
-    @media (max-width: 52rem) {
-      .setup { grid-template-columns: minmax(0, 1fr); row-gap: 1.75rem; }
-      .topbar__row { gap: 1rem; }
-      .chart__box { height: 16rem; }
+    @media (max-width: 58rem) {
+      .hero { grid-template-columns: minmax(0, 1fr); }
+      .hero h2 { font-size: clamp(3.25rem, 14vw, 6rem); }
+      .picks { margin-top: 1.75rem; }
+    }
+
+    @media (max-width: 40rem) {
+      .fields { grid-template-columns: minmax(0, 1fr); }
+      .team-grid { grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr)); gap: 0.75rem; }
+      .card__body { padding: 0.75rem; }
+      .card__name { font-size: 1.375rem; }
+      .card__score b { font-size: 1.75rem; }
+      .card dd { font-size: 1.0625rem; }
+      .pd__head { grid-template-columns: minmax(0, 1fr); align-items: start; }
+      .pd__photo { max-width: 11rem; }
+      .stat { grid-template-columns: 4.5rem minmax(0, 1fr) 5.5rem; row-gap: 0.4rem; }
+      .stat .bar { grid-column: 1 / -1; grid-row: 2; }
+      .avatar { width: 4rem; height: 4rem; }
+      .player { font-size: 1.0625rem; gap: 0.75rem; }
     }
 
     @media (max-width: 30rem) {
-      .brand { font-size: 1.125rem; }
-      .tab { padding: 0 0.625rem; }
-      .tab::after { left: 0.625rem; right: 0.625rem; }
+      .brand { font-size: 1.375rem; }
+      .tab { padding: 0 0.625rem; font-size: 0.9375rem; }
     }
 
     @media (prefers-reduced-motion: reduce) {
-      .skel { animation: none; }
-      .tab::after, .btn, .skip-link { transition: none; }
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-delay: 0ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    /* mode switch and tabs wrap onto two rows when the bar gets narrow */
+    @media (max-width: 62rem) {
+      .topbar__row {
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0 1rem;
+        min-height: 0;
+      }
+
+      .brand { padding-block: 0.8rem; }
+      .modes { margin-left: auto; }
+
+      .tabs {
+        order: 3;
+        flex: 1 1 100%;
+        min-height: 2.75rem;
+        margin-inline: calc(-1 * clamp(1rem, 4vw, 2rem));
+        padding-inline: clamp(0.5rem, 3vw, 1.5rem);
+        border-top: 1px solid var(--line);
+      }
+
+    }
+
+    @media (max-width: 30rem) {
+      .mode { padding: 0.4rem 0.5rem; font-size: 0.8125rem; }
+      .topbar__row .brand { font-size: 1.125rem; }
+    }
+
+    /* below ~1200px the table is wider than the page, so it scrolls in its own box
+       and the headers stick to the top of that box */
+    @media (max-width: 75rem) {
+      .table-wrap {
+        overflow: auto;
+        /* 5rem is the page's bottom padding: at the very bottom of the page the box
+           still starts below the top bar, so its headers are never hidden */
+        max-height: calc(100dvh - var(--topbar-h, 65px) - 5rem);
+      }
+
+      th { top: 0; }
     }
   </style>
 </head>
@@ -469,78 +1383,102 @@
   <header class="topbar">
     <div class="wrap topbar__row">
       <h1 class="brand">Hooplytics</h1>
-      <nav class="tabs" role="tablist" aria-label="Sections">
+
+      <div class="modes" id="modes" data-mode="draft" role="group" aria-label="Section">
+        <span class="mode-indicator" aria-hidden="true"></span>
+        <button type="button" class="mode" data-mode="draft" aria-pressed="true">Mock draft</button>
+        <button type="button" class="mode" data-mode="season" aria-pressed="false">Season tracker</button>
+      </div>
+
+      <nav class="tabs" data-mode="draft" role="tablist" aria-label="Mock draft">
         <button class="tab" role="tab" id="tab-settings" aria-controls="settings-tab" aria-selected="true" data-tab="settings">Setup</button>
         <button class="tab" role="tab" id="tab-your-team" aria-controls="your-team-tab" aria-selected="false" data-tab="your-team" tabindex="-1">Your team</button>
         <button class="tab" role="tab" id="tab-draft-pool" aria-controls="draft-pool-tab" aria-selected="false" data-tab="draft-pool" tabindex="-1">Draft pool</button>
         <button class="tab" role="tab" id="tab-analytics" aria-controls="analytics-tab" aria-selected="false" data-tab="analytics" tabindex="-1">Analytics</button>
+        <span class="tab-indicator" aria-hidden="true"></span>
+      </nav>
+
+      <nav class="tabs" data-mode="season" role="tablist" aria-label="Season tracker" hidden>
+        <button class="tab" role="tab" id="tab-roster" aria-controls="roster-tab" aria-selected="false" data-tab="roster" tabindex="-1">My roster</button>
+        <button class="tab" role="tab" id="tab-top" aria-controls="top-tab" aria-selected="false" data-tab="top" tabindex="-1">Top performers</button>
+        <button class="tab" role="tab" id="tab-waiver" aria-controls="waiver-tab" aria-selected="false" data-tab="waiver" tabindex="-1">Waiver wire</button>
+        <span class="tab-indicator" aria-hidden="true"></span>
       </nav>
     </div>
   </header>
 
   <main id="main" class="wrap">
     <section id="settings-tab" class="panel" role="tabpanel" aria-labelledby="tab-settings">
-      <h2>Simulate your draft</h2>
-      <p class="lede">The other teams take the best player available by overall value. You pick by your own ranking, so punting a category changes who you take.</p>
+      <div class="hero">
+        <div>
+          <h2 class="display">
+            <span class="rise" style="--d:0">Simulate</span>
+            <span class="rise" style="--d:1">your fantasy</span>
+            <span class="rise accent" style="--d:2">draft.</span>
+          </h2>
+          <p class="lede rise" style="--d:3" data-text-cat="Other teams take the best player left. You draft by your own category strategy. See the roster it builds." data-text-pts="Every team takes the best player left by average fantasy points per game. See the roster you end up with.">Other teams take the best player left. You draft by your own category strategy. See the roster it builds.</p>
 
-      <form class="setup" id="setup-form" novalidate>
-        <div class="fields">
-          <div class="field">
-            <label for="num_teams">Teams</label>
-            <input type="number" id="num_teams" value="10" min="2" max="20" inputmode="numeric">
-          </div>
-          <div class="field">
-            <label for="num_rounds">Rounds</label>
-            <input type="number" id="num_rounds" value="13" min="1" max="20" inputmode="numeric">
-          </div>
-          <div class="field">
-            <label for="your_pick">Your draft position</label>
-            <input type="number" id="your_pick" value="1" min="1" max="20" inputmode="numeric">
-            <p class="hint">Snake order. Position 1 picks first and last in the first two rounds.</p>
+          <div class="picks rise" style="--d:4">
+            <p class="picks__title">Your pick numbers, snake order</p>
+            <ol class="picks__list" id="picks-list"></ol>
           </div>
         </div>
 
-        <fieldset class="punt">
-          <legend>Punt categories</legend>
-          <p class="hint">Selected categories are ignored when ranking players for your picks.</p>
-          <div class="chips" id="punt_categories">
-            <label class="chip"><input type="checkbox" value="PTS"><span>Points</span></label>
-            <label class="chip"><input type="checkbox" value="REB"><span>Rebounds</span></label>
-            <label class="chip"><input type="checkbox" value="AST"><span>Assists</span></label>
-            <label class="chip"><input type="checkbox" value="STL"><span>Steals</span></label>
-            <label class="chip"><input type="checkbox" value="BLK"><span>Blocks</span></label>
-            <label class="chip"><input type="checkbox" value="FG_PCT"><span>FG%</span></label>
-            <label class="chip"><input type="checkbox" value="FT_PCT"><span>FT%</span></label>
-            <label class="chip"><input type="checkbox" value="FG3M"><span>3-pointers</span></label>
-            <label class="chip"><input type="checkbox" value="TOV"><span>Turnovers</span></label>
+        <form class="console rise" style="--d:3" id="setup-form" novalidate>
+          <div data-scoring></div>
+          <div class="fields">
+            <div class="field">
+              <label for="num_teams">Teams</label>
+              <input type="number" id="num_teams" value="10" min="2" max="20" inputmode="numeric">
+            </div>
+            <div class="field">
+              <label for="num_rounds">Rounds</label>
+              <input type="number" id="num_rounds" value="13" min="1" max="20" inputmode="numeric">
+            </div>
+            <div class="field">
+              <label for="your_pick">Your pick</label>
+              <input type="number" id="your_pick" value="1" min="1" max="20" inputmode="numeric">
+            </div>
           </div>
-        </fieldset>
 
-        <div class="actions">
-          <button type="submit" class="btn btn--primary" id="simulate-btn">Simulate draft</button>
-          <p class="form-error" id="setup-error" role="alert" hidden></p>
-        </div>
-      </form>
+          <fieldset class="punt" id="punt-fieldset">
+            <legend>Punt categories</legend>
+            <p class="hint">Selected categories are ignored when ranking players for your picks.</p>
+            <div class="chips" id="punt_categories">
+              <label class="chip"><input type="checkbox" value="PTS"><span>Points</span></label>
+              <label class="chip"><input type="checkbox" value="REB"><span>Rebounds</span></label>
+              <label class="chip"><input type="checkbox" value="AST"><span>Assists</span></label>
+              <label class="chip"><input type="checkbox" value="STL"><span>Steals</span></label>
+              <label class="chip"><input type="checkbox" value="BLK"><span>Blocks</span></label>
+              <label class="chip"><input type="checkbox" value="FG_PCT"><span>FG%</span></label>
+              <label class="chip"><input type="checkbox" value="FT_PCT"><span>FT%</span></label>
+              <label class="chip"><input type="checkbox" value="FG3M"><span>3-pointers</span></label>
+              <label class="chip"><input type="checkbox" value="TOV"><span>Turnovers</span></label>
+            </div>
+          </fieldset>
+
+          <div>
+            <button type="submit" class="btn btn--primary" id="simulate-btn" style="width:100%">Simulate draft</button>
+            <p class="form-error" id="setup-error" role="alert" hidden style="margin-top:0.75rem"></p>
+          </div>
+        </form>
+      </div>
     </section>
 
     <section id="your-team-tab" class="panel" role="tabpanel" aria-labelledby="tab-your-team" hidden>
-      <div class="table-head">
-        <h2>Your team</h2>
-        <p class="lede">Players your strategy drafted, ranked by their position in the full pool. Score is the punt-adjusted total z-score.</p>
-      </div>
-      <div class="table-wrap">
-        <table id="your_team_table">
-          <thead></thead>
-          <tbody></tbody>
-        </table>
-      </div>
+      <h2 class="display section-title">Your team</h2>
+      <p class="lede" data-text-cat="Select a player card for the full breakdown. Score is the punt-adjusted total z-score." data-text-pts="Select a player card for the full breakdown. FP/G is average fantasy points per game.">Select a player card for the full breakdown. Score is the punt-adjusted total z-score.</p>
+
+      <div class="notice stale" data-draft-stale hidden><span data-stale-text></span> <button type="button" class="btn btn--ghost" data-resim>Simulate again</button></div>
+
+      <div id="team-summary"></div>
+      <div class="team-grid" id="team-grid"></div>
     </section>
 
     <section id="draft-pool-tab" class="panel" role="tabpanel" aria-labelledby="tab-draft-pool" hidden>
-      <div class="table-head">
-        <h2>Draft pool</h2>
-        <p class="lede">Every drafted-range player ranked by your strategy. Your own picks are marked.</p>
-      </div>
+      <h2 class="display section-title">Draft pool</h2>
+      <p class="lede">Every drafted-range player ranked by your strategy. Your own picks are marked.</p>
+      <div class="notice stale" data-draft-stale hidden><span data-stale-text></span> <button type="button" class="btn btn--ghost" data-resim>Simulate again</button></div>
       <div class="table-wrap">
         <table id="draft_pool_table">
           <thead></thead>
@@ -550,7 +1488,7 @@
     </section>
 
     <section id="analytics-tab" class="panel" role="tabpanel" aria-labelledby="tab-analytics" hidden>
-      <h2>Team analytics</h2>
+      <h2 class="display section-title">Team analytics</h2>
       <p class="lede">Your team's per-player averages next to the average player in the pool.</p>
 
       <div class="notice" id="analytics-placeholder">
@@ -575,127 +1513,403 @@
         </div>
       </div>
     </section>
+    <section id="roster-tab" class="panel" role="tabpanel" aria-labelledby="tab-roster" hidden>
+      <h2 class="display section-title">My roster</h2>
+      <p class="lede">Add the players you own to see how they are playing this season. Everything is a per-game average from the games played so far.</p>
+
+      <div class="scoring-bar" data-scoring></div>
+      <div class="season-status" data-season-status></div>
+
+      <form class="adder" id="roster-form" novalidate>
+        <div class="field">
+          <label for="roster-input">Add a player</label>
+          <div class="picker">
+            <input type="text" id="roster-input" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="roster-listbox" autocomplete="off" spellcheck="false" placeholder="Start typing a name">
+            <ul class="picker__list" id="roster-listbox" role="listbox" aria-label="Players" hidden></ul>
+          </div>
+        </div>
+        <button type="submit" class="btn btn--primary" id="roster-add">Add player</button>
+      </form>
+      <p class="form-error" id="roster-error" role="alert" hidden style="margin-top:0.75rem"></p>
+
+      <div id="roster-summary"></div>
+      <div class="team-grid" id="roster-grid"></div>
+    </section>
+
+    <section id="top-tab" class="panel" role="tabpanel" aria-labelledby="tab-top" hidden>
+      <h2 class="display section-title">Top performers</h2>
+      <p class="lede" data-text-cat="Ranked by total z-score across points, rebounds, assists, steals, blocks, threes, shooting efficiency and turnovers, using each player's average per game this season." data-text-pts="Ranked by average fantasy points per game this season, using ESPN points scoring.">Ranked by total z-score across points, rebounds, assists, steals, blocks, threes, shooting efficiency and turnovers, using each player's average per game this season.</p>
+
+      <div class="scoring-bar" data-scoring></div>
+      <div class="season-status" data-season-status></div>
+
+      <form class="filters" id="top-filters" novalidate>
+        <div class="field">
+          <label for="min-gp">Minimum games played</label>
+          <input type="number" id="min-gp" min="1" max="82" inputmode="numeric">
+        </div>
+        <fieldset class="punt">
+          <legend>Show</legend>
+          <div class="chips">
+            <label class="chip"><input type="radio" name="top-n" value="25" checked><span>Top 25</span></label>
+            <label class="chip"><input type="radio" name="top-n" value="50"><span>Top 50</span></label>
+            <label class="chip"><input type="radio" name="top-n" value="100"><span>Top 100</span></label>
+            <label class="chip"><input type="radio" name="top-n" value="200"><span>Top 200</span></label>
+          </div>
+        </fieldset>
+      </form>
+      <p class="hint" style="margin-top:0.75rem">Players on your roster are marked. Injured players are included even if they are under the minimum games.</p>
+
+      <div class="table-wrap">
+        <table id="top_table">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+    <section id="waiver-tab" class="panel" role="tabpanel" aria-labelledby="tab-waiver" hidden>
+      <h2 class="display section-title">Waiver wire help</h2>
+      <p class="lede">Pickups ranked outside the top 110 whose recent games beat their season averages in both minutes and production. Injured and out players are left off.</p>
+
+      <div class="scoring-bar" data-scoring></div>
+      <div class="season-status" data-waiver-status></div>
+
+      <form class="filters" id="waiver-filters" novalidate>
+        <fieldset class="punt">
+          <legend>Recent games</legend>
+          <div class="chips">
+            <label class="chip"><input type="radio" name="waiver-window" value="3"><span>Last 3</span></label>
+            <label class="chip"><input type="radio" name="waiver-window" value="5" checked><span>Last 5</span></label>
+            <label class="chip"><input type="radio" name="waiver-window" value="7"><span>Last 7</span></label>
+          </div>
+        </fieldset>
+      </form>
+      <p class="hint" style="margin-top:0.75rem" data-text-cat="The small number under each stat is the change from the player's season average. Score is the total z-score over the recent games, with the gain over the season score beneath it." data-text-pts="The small number under each stat is the change from the player's season average. FP/G is average fantasy points over the recent games, with the gain over the season average beneath it.">The small number under each stat is the change from the player's season average. Score is the total z-score over the recent games, with the gain over the season score beneath it.</p>
+
+      <div class="table-wrap">
+        <table id="waiver_table">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
   </main>
+
+  <dialog class="pd" id="player-dialog" aria-labelledby="pd-name">
+    <div class="pd__panel" id="pd-panel">
+      <div class="pd__top">
+        <span id="pd-count">1 / 1</span>
+        <button type="button" class="btn btn--ghost" id="pd-close" style="padding:0.4rem 0.9rem">Close</button>
+      </div>
+      <div class="pd__body" id="pd-body">
+        <div class="pd__head">
+          <div class="pd__photo" id="pd-photo" data-photo></div>
+          <div>
+            <p class="pd__meta" id="pd-meta"></p>
+            <h3 class="display pd__name" id="pd-name"></h3>
+            <div class="pd__score"><b id="pd-score">0.00</b><small id="pd-score-label">score</small></div>
+            <ul class="pd__facts" id="pd-facts"></ul>
+            <p class="pd__injury" id="pd-injury" hidden></p>
+          </div>
+        </div>
+        <p class="hint pd__legend">The number on the right is the player's rank in that stat among all ranked players (1 is the best). The bar fills by percentile, so a full bar means he beats nearly everyone.</p>
+        <div class="pd__stats" id="pd-stats"></div>
+      </div>
+      <div class="pd__nav">
+        <button type="button" class="btn btn--ghost" id="pd-prev">Previous</button>
+        <button type="button" class="btn btn--ghost" id="pd-next">Next</button>
+      </div>
+    </div>
+  </dialog>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 
   <script>
     const CATEGORIES = ['PTS', 'REB', 'AST', 'STL', 'BLK', 'FG_PCT', 'FT_PCT', 'FG3M', 'TOV'];
     const COLORS = {
-      accent: '#1B44E0',
-      neutral: '#CFCABA',
-      good: '#0A7D59',
-      bad: '#C63A22',
-      ink: '#17150F',
-      muted: '#6A665C',
-      grid: '#E5E1D6'
+      accent: '#D4FF3A',
+      neutral: '#3A3D46',
+      bad: '#FF6B5B',
+      ink: '#F3F2ED',
+      muted: '#9B9DA6',
+      grid: '#25272D'
     };
     const COLUMNS = [
       ['#', 'l'], ['Player', 'l'], ['Score', ''], ['GP', ''], ['PTS', ''], ['REB', ''], ['AST', ''],
       ['STL', ''], ['BLK', ''], ['FG', ''], ['FT', ''], ['3PM', ''], ['TOV', '']
     ];
-
     const LABELS = { FG_PCT: 'FG%', FT_PCT: 'FT%', FG3M: '3PM' };
     const label = cat => LABELS[cat] || cat;
 
+    // every stat shown in the player dialog, ranked against the whole pool
+    const METRICS = [
+      { key: 'PTS', label: 'Points', get: s => s.PTS },
+      { key: 'REB', label: 'Rebounds', get: s => s.REB },
+      { key: 'AST', label: 'Assists', get: s => s.AST },
+      { key: 'STL', label: 'Steals', get: s => s.STL },
+      { key: 'BLK', label: 'Blocks', get: s => s.BLK },
+      { key: 'FG3M', label: '3-pointers', get: s => s.FG3M },
+      { key: 'FG_PCT', label: 'FG%', get: s => (s.FGA ? s.FGM / s.FGA * 100 : 0), pct: true, sub: s => `${s.FGM}/${s.FGA} made` },
+      { key: 'FT_PCT', label: 'FT%', get: s => (s.FTA ? s.FTM / s.FTA * 100 : 0), pct: true, sub: s => `${s.FTM}/${s.FTA} made` },
+      { key: 'TOV', label: 'Turnovers', get: s => s.TOV, lowerBetter: true }
+    ];
+
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const $ = id => document.getElementById(id);
+
+    const state = { team: [], pool: [], poolStats: {}, settings: null, current: 0, busy: false, view: null };
     let hasTeam = false;
     let teamComparisonChart = null;
     let categoryBreakdownChart = null;
-
-    const $ = id => document.getElementById(id);
 
     const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
     function esc(value) {
       return String(value).replace(/[&<>"']/g, ch => ESC[ch]);
     }
 
-    /* ─── Tabs ─── */
+    function ordinal(n) {
+      const v = n % 100;
+      if (v >= 11 && v <= 13) return n + 'th';
+      return n + (['th', 'st', 'nd', 'rd'][n % 10] || 'th');
+    }
+
+    /* ─── Scoring setting ─── */
+    // 'categories' grades players by total z-score; 'points' ranks by average fantasy points per game
+    const SCORING_KEY = 'hooplytics.scoring';
+    const POINTS_FORMULA = 'ESPN points scoring: PTS 1, REB 1, AST 2, STL 4, BLK 4, TO -2, 3PM 1, FGM 2, FGA -1, FTM 1, FTA -1';
+    const CATEGORIES_NOTE = 'Players are graded by total z-score across nine categories.';
+
+    function loadScoring() {
+      try {
+        return localStorage.getItem(SCORING_KEY) === 'points' ? 'points' : 'categories';
+      } catch (err) {
+        return 'categories';
+      }
+    }
+
+    let scoring = loadScoring();
+    const isPoints = () => scoring === 'points';
+    const scoreDecimals = () => (isPoints() ? 1 : 2);
+    const scoreName = () => (isPoints() ? 'FP/G' : 'Score');
+    const fmtScore = value => (isPoints() ? Number(value).toFixed(1) : String(value));
+
+    function scoringControlHTML() {
+      const button = (value, text) =>
+        `<button type="button" class="seg__btn" data-scoring-set="${value}" aria-pressed="${scoring === value}">${text}</button>`;
+      return '<div class="scoring" role="group" aria-label="Scoring format"><span class="scoring__label">Scoring</span>' +
+        `<div class="seg">${button('categories', 'Categories')}${button('points', 'Points')}</div>` +
+        `<span class="scoring__hint">${isPoints() ? POINTS_FORMULA : CATEGORIES_NOTE}</span></div>`;
+    }
+
+    function renderScoringControls() {
+      document.querySelectorAll('[data-scoring]').forEach(el => { el.innerHTML = scoringControlHTML(); });
+    }
+
+    // paragraphs that describe the ranking carry both versions of their text
+    function applyScoringText() {
+      document.querySelectorAll('[data-text-cat]').forEach(el => {
+        el.textContent = isPoints() ? el.dataset.textPts : el.dataset.textCat;
+      });
+      $('punt-fieldset').hidden = isPoints();
+    }
+
+    function updateDraftStale() {
+      const stale = hasTeam && state.draftScoring && state.draftScoring !== scoring;
+      document.querySelectorAll('[data-draft-stale]').forEach(el => {
+        el.hidden = !stale;
+        const text = el.querySelector('[data-stale-text]');
+        if (stale && text) text.textContent = `This draft used ${state.draftScoring} scoring, but the setting is now ${scoring}.`;
+      });
+    }
+
+    function setScoring(mode) {
+      if (mode === scoring) return;
+      scoring = mode;
+      try {
+        localStorage.setItem(SCORING_KEY, mode);
+      } catch (err) {
+        // storage can be blocked; the setting then lasts for this visit only
+      }
+      renderScoringControls();
+      applyScoringText();
+      renderHeads();
+      renderWaiverHead();
+      updateDraftStale();
+      // season tracker data is re-ranked on the server; wait for any request already under way
+      if (season.data) Promise.resolve(season.loading).catch(() => {}).then(() => loadSeason()).catch(() => {});
+      if (waiver.data) Promise.resolve(waiver.loading).catch(() => {}).then(() => loadWaiver()).catch(() => {});
+    }
+
+    document.addEventListener('click', e => {
+      const choice = e.target.closest('[data-scoring-set]');
+      if (choice) setScoring(choice.dataset.scoringSet);
+      if (e.target.closest('[data-resim]')) simulateDraft();
+    });
+
+    /* ─── Count-up numbers ─── */
+    function countUp(el, to, decimals, duration) {
+      if (reduced || !isFinite(to)) {
+        el.textContent = to.toFixed(decimals);
+        return;
+      }
+      const start = performance.now();
+      const ms = duration || 900;
+      function frame(now) {
+        const t = Math.min(1, (now - start) / ms);
+        const eased = 1 - Math.pow(1 - t, 4);
+        el.textContent = (to * eased).toFixed(decimals);
+        if (t < 1) requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
+    }
+
+    /* ─── Modes and tabs ─── */
     const tabs = Array.from(document.querySelectorAll('.tab'));
+    const navs = Array.from(document.querySelectorAll('.tabs'));
+    const modeButtons = Array.from(document.querySelectorAll('.mode'));
+    const lastTab = { draft: 'settings', season: 'roster' };
+    let currentMode = 'draft';
+
+    function moveIndicator() {
+      navs.forEach(nav => {
+        if (nav.hidden) return;
+        const active = nav.querySelector('.tab[aria-selected="true"]');
+        const bar = nav.querySelector('.tab-indicator');
+        if (!active || !bar) return;
+        bar.style.width = active.offsetWidth + 'px';
+        bar.style.transform = `translateX(${active.offsetLeft}px)`;
+      });
+    }
+
+    function setMode(mode) {
+      currentMode = mode;
+      $('modes').dataset.mode = mode;
+      modeButtons.forEach(btn => btn.setAttribute('aria-pressed', btn.dataset.mode === mode));
+      navs.forEach(nav => { nav.hidden = nav.dataset.mode !== mode; });
+    }
 
     function switchTab(name) {
+      setMode($('tab-' + name).closest('.tabs').dataset.mode);
+      lastTab[currentMode] = name;
       tabs.forEach(tab => {
         const on = tab.dataset.tab === name;
         tab.setAttribute('aria-selected', on);
         tab.tabIndex = on ? 0 : -1;
         $(tab.dataset.tab + '-tab').hidden = !on;
       });
+      moveIndicator();
       if (name === 'analytics') updateAnalyticsAvailability();
+      if (name === 'roster' || name === 'top') ensureSeason().catch(() => {});
+      if (name === 'waiver') ensureWaiver().catch(() => {});
+      window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
     }
 
-    tabs.forEach((tab, i) => {
+    modeButtons.forEach(btn => {
+      btn.addEventListener('click', () => switchTab(lastTab[btn.dataset.mode]));
+    });
+
+    tabs.forEach(tab => {
       tab.addEventListener('click', () => switchTab(tab.dataset.tab));
       tab.addEventListener('keydown', e => {
         const step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
         if (!step) return;
-        const next = tabs[(i + step + tabs.length) % tabs.length];
+        const group = tabs.filter(t => t.closest('.tabs') === tab.closest('.tabs'));
+        const next = group[(group.indexOf(tab) + step + group.length) % group.length];
         next.focus();
         switchTab(next.dataset.tab);
       });
     });
 
-    /* ─── Tables ─── */
-    function renderHeads() {
-      const head = '<tr>' + COLUMNS.map(([label, cls]) => `<th scope="col" class="${cls}">${label}</th>`).join('') + '</tr>';
-      document.querySelectorAll('thead').forEach(el => { el.innerHTML = head; });
+    window.addEventListener('resize', moveIndicator);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(moveIndicator);
+
+    /* ─── Injury tags ─── */
+    const STATUS_LABELS = { 'Out': 'Out', 'Day-To-Day': 'Day-to-day', 'Suspension': 'Suspended' };
+
+    function injuryLabel(inj) {
+      return STATUS_LABELS[inj.status] || inj.status;
     }
 
-    function emptyRow(message, isError) {
-      return `<tr class="empty${isError ? ' is-error' : ''}"><td colspan="${COLUMNS.length}">${esc(message)}</td></tr>`;
+    function fmtReturn(iso) {
+      const d = new Date(`${iso}T00:00:00`);
+      if (isNaN(d)) return '';
+      const sameYear = d.getFullYear() === new Date().getFullYear();
+      return d.toLocaleDateString(undefined, sameYear ? { month: 'short', day: 'numeric' } : { month: 'short', day: 'numeric', year: 'numeric' });
     }
 
-    function skeletonRows(count) {
-      const cell = '<td><span class="skel"></span></td>';
-      return Array.from({ length: count }, () => '<tr>' + cell.repeat(COLUMNS.length) + '</tr>').join('');
+    function injuryParts(inj) {
+      const back = inj.return_date ? fmtReturn(inj.return_date.slice(0, 10)) : '';
+      return [inj.detail && inj.detail.toLowerCase(), back && 'expected back ' + back].filter(Boolean).join(', ');
     }
 
+    // red tag beside a name: filled for Out, outlined for day-to-day and suspensions
+    function injuryTag(player) {
+      const inj = player.injury;
+      if (!inj) return '';
+      const rest = injuryParts(inj);
+      const title = injuryLabel(inj) + (rest ? ', ' + rest : '');
+      return `<span class="inj${inj.status === 'Out' ? ' inj--out' : ''}" title="${esc(title)}">${esc(inj.tag)}</span>`;
+    }
+
+    function renderInjuryDetail(player) {
+      const el = $('pd-injury');
+      const inj = player.injury;
+      if (!inj) {
+        el.hidden = true;
+        el.innerHTML = '';
+        return;
+      }
+      const rest = injuryParts(inj);
+      const note = inj.comment && inj.comment.length > 260 ? inj.comment.slice(0, 257) + '...' : (inj.comment || '');
+      el.innerHTML = `<b>${esc(injuryLabel(inj))}</b>${esc(rest)}` + (note ? `<small>${esc(note)}</small>` : '');
+      el.hidden = false;
+    }
+
+    /* ─── Photos ─── */
     function initials(name) {
       return name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
     }
 
-    function avatar(player) {
-      if (!player.player_id) {
-        return `<span class="avatar avatar--initials" aria-hidden="true">${esc(initials(player.name))}</span>`;
+    // NBA headshots by NBA id; players without one (new rookies) use the photo link ESPN supplies
+    function photoSrc(player) {
+      if (player.player_id) {
+        return `https://cdn.nba.com/headshots/nba/latest/1040x760/${encodeURIComponent(player.player_id)}.png`;
       }
-      const url = `https://cdn.nba.com/headshots/nba/latest/1040x760/${encodeURIComponent(player.player_id)}.png`;
-      return `<img class="avatar" src="${url}" alt="" width="36" height="36" loading="lazy" data-name="${esc(player.name)}">`;
+      return typeof player.headshot === 'string' && player.headshot.startsWith('https://') ? player.headshot : '';
+    }
+
+    function imgHTML(player) {
+      return `<img src="${esc(photoSrc(player))}" alt="" width="260" height="260" loading="lazy" decoding="async" data-name="${esc(player.name)}">`;
+    }
+
+    function photo(player, cls) {
+      if (!photoSrc(player)) {
+        return `<span class="${cls} is-initials" data-photo aria-hidden="true">${esc(initials(player.name))}</span>`;
+      }
+      return `<span class="${cls}" data-photo aria-hidden="true">${imgHTML(player)}</span>`;
+    }
+
+    function setPhoto(box, player) {
+      if (!photoSrc(player)) {
+        box.classList.add('is-initials');
+        box.textContent = initials(player.name);
+        return;
+      }
+      box.classList.remove('is-initials');
+      box.innerHTML = imgHTML(player);
     }
 
     // headshots that fail to load fall back to initials
     document.addEventListener('error', e => {
       const img = e.target;
-      if (!(img instanceof HTMLImageElement) || !img.classList.contains('avatar')) return;
-      const span = document.createElement('span');
-      span.className = 'avatar avatar--initials';
-      span.setAttribute('aria-hidden', 'true');
-      span.textContent = initials(img.dataset.name || '');
-      img.replaceWith(span);
+      if (!(img instanceof HTMLImageElement)) return;
+      const box = img.closest('[data-photo]');
+      if (!box) return;
+      box.classList.add('is-initials');
+      box.textContent = initials(img.dataset.name || '');
     }, true);
 
-    function shooting(made, att) {
-      const pct = att ? (made / att * 100).toFixed(1) : '0.0';
-      return `${made}/${att}<small>${pct}%</small>`;
-    }
-
-    function playerRow(player, rank, mine) {
-      const s = player.stats;
-      return `<tr${mine ? ' class="is-mine"' : ''}>
-        <td class="rank l">${rank === '' ? '' : rank}</td>
-        <td class="l"><div class="player">${avatar(player)}<span>${esc(player.name)}</span></div></td>
-        <td class="score">${player.adjusted_z}</td>
-        <td>${player.gp}</td>
-        <td>${s.PTS}</td>
-        <td>${s.REB}</td>
-        <td>${s.AST}</td>
-        <td>${s.STL}</td>
-        <td>${s.BLK}</td>
-        <td>${shooting(s.FGM, s.FGA)}</td>
-        <td>${shooting(s.FTM, s.FTA)}</td>
-        <td>${s.FG3M}</td>
-        <td>${s.TOV}</td>
-      </tr>`;
-    }
-
-    /* ─── Form ─── */
+    /* ─── Setup form ─── */
     function readSettings() {
       return {
         numTeams: parseInt($('num_teams').value, 10),
@@ -703,6 +1917,23 @@
         yourPick: parseInt($('your_pick').value, 10),
         punt: Array.from(document.querySelectorAll('#punt_categories input:checked')).map(cb => cb.value)
       };
+    }
+
+    function overallPick(round0, position, teams) {
+      return round0 * teams + (round0 % 2 === 0 ? position : teams - position + 1);
+    }
+
+    function renderPicks() {
+      const { numTeams, numRounds, yourPick } = readSettings();
+      const list = $('picks-list');
+      if (!(numTeams >= 2 && numRounds >= 1 && yourPick >= 1 && yourPick <= numTeams)) {
+        list.innerHTML = '';
+        return;
+      }
+      const rounds = Math.min(numRounds, 20);
+      list.innerHTML = Array.from({ length: rounds }, (_, r) =>
+        `<li style="--k:${r}"><small>R${r + 1}</small><b>${overallPick(r, yourPick, numTeams)}</b></li>`
+      ).join('');
     }
 
     function requestBody() {
@@ -714,7 +1945,8 @@
         min_gp: 20,
         user_pick: s.yourPick,
         num_teams: s.numTeams,
-        num_rounds: s.numRounds
+        num_rounds: s.numRounds,
+        scoring: scoring
       });
     }
 
@@ -727,7 +1959,7 @@
       const s = readSettings();
       if (!(s.numTeams >= 2 && s.numTeams <= 20)) return 'Teams must be between 2 and 20.';
       if (!(s.numRounds >= 1 && s.numRounds <= 20)) return 'Rounds must be between 1 and 20.';
-      if (!(s.yourPick >= 1 && s.yourPick <= s.numTeams)) return `Draft position must be between 1 and ${s.numTeams}.`;
+      if (!(s.yourPick >= 1 && s.yourPick <= s.numTeams)) return `Pick must be between 1 and ${s.numTeams}.`;
       return '';
     }
 
@@ -735,7 +1967,10 @@
       const teams = parseInt(this.value, 10);
       const pick = $('your_pick');
       if (teams >= 2 && parseInt(pick.value, 10) > teams) pick.value = teams;
+      renderPicks();
     });
+    $('num_rounds').addEventListener('input', renderPicks);
+    $('your_pick').addEventListener('input', renderPicks);
 
     $('setup-form').addEventListener('submit', e => {
       e.preventDefault();
@@ -752,39 +1987,359 @@
       return res.json();
     }
 
+    /* ─── Pool statistics (percentiles for the player dialog) ─── */
+    function buildPoolStats(pool) {
+      const stats = {};
+      METRICS.forEach(m => {
+        const values = pool.map(p => m.get(p.stats)).sort((a, b) => a - b);
+        const mean = values.reduce((sum, v) => sum + v, 0) / (values.length || 1);
+        stats[m.key] = { values, mean };
+      });
+      return stats;
+    }
+
+    function percentile(metric, value, stats) {
+      const { values } = stats[metric.key];
+      let below = 0;
+      let equal = 0;
+      values.forEach(v => {
+        if (v < value) below += 1;
+        else if (v === value) equal += 1;
+      });
+      const better = metric.lowerBetter ? values.length - below - equal : below;
+      return Math.round((better + equal / 2) / (values.length || 1) * 100);
+    }
+
+    function rankIn(metric, value, stats) {
+      const { values } = stats[metric.key];
+      const ahead = values.filter(v => (metric.lowerBetter ? v < value : v > value)).length;
+      return { rank: ahead + 1, total: values.length };
+    }
+
+    function fmtMetric(metric, value) {
+      return metric.pct ? value.toFixed(1) + '%' : String(Math.round(value * 10) / 10);
+    }
+
+    /* ─── Table (draft pool) ─── */
+    function renderHeads() {
+      const head = '<tr>' + COLUMNS.map(([name, cls]) => `<th scope="col" class="${cls}">${name === 'Score' ? scoreName() : name}</th>`).join('') + '</tr>';
+      document.querySelectorAll('#draft_pool_table thead, #top_table thead').forEach(el => { el.innerHTML = head; });
+    }
+
+    function emptyRow(message, isError, cols) {
+      return `<tr class="empty${isError ? ' is-error' : ''}"><td colspan="${cols || COLUMNS.length}">${esc(message)}</td></tr>`;
+    }
+
+    function skeletonRows(count, cols) {
+      const cell = '<td><span class="skel"></span></td>';
+      return Array.from({ length: count }, () => '<tr>' + cell.repeat(cols || COLUMNS.length) + '</tr>').join('');
+    }
+
+    function shooting(made, att) {
+      const pct = att ? (made / att * 100).toFixed(1) : '0.0';
+      return `${made}/${att}<small>${pct}%</small>`;
+    }
+
+    function poolRow(player, rank, mine) {
+      const s = player.stats;
+      return `<tr class="reveal${mine ? ' is-mine' : ''}" data-i="${Number(rank) - 1}">
+        <td class="rank n l">${rank}</td>
+        <td class="l"><div class="player">${photo(player, 'avatar')}<span><button type="button" class="rowlink" aria-haspopup="dialog">${esc(player.name)}</button>${injuryTag(player)}${player.team ? `<small>${esc(player.team)}</small>` : ''}</span></div></td>
+        <td class="n score">${fmtScore(player.adjusted_z)}</td>
+        <td class="n">${player.gp}</td>
+        <td class="n">${s.PTS}</td>
+        <td class="n">${s.REB}</td>
+        <td class="n">${s.AST}</td>
+        <td class="n">${s.STL}</td>
+        <td class="n">${s.BLK}</td>
+        <td class="n">${shooting(s.FGM, s.FGA)}</td>
+        <td class="n">${shooting(s.FTM, s.FTA)}</td>
+        <td class="n">${s.FG3M}</td>
+        <td class="n">${s.TOV}</td>
+      </tr>`;
+    }
+
+    const revealObserver = 'IntersectionObserver' in window
+      ? new IntersectionObserver(entries => {
+          entries.forEach(entry => {
+            if (!entry.isIntersecting) return;
+            entry.target.classList.add('in');
+            revealObserver.unobserve(entry.target);
+          });
+        }, { rootMargin: '0px 0px -8% 0px' })
+      : null;
+
+    function observeRows(tbody) {
+      tbody.querySelectorAll('tr.reveal').forEach(row => {
+        if (revealObserver && !reduced) revealObserver.observe(row);
+        else row.classList.add('in');
+      });
+    }
+
+    /* ─── Team cards ─── */
+    function cardHTML(player, i, tag, meta) {
+      const s = player.stats;
+      return `<button type="button" class="card" style="--i:${i}" data-i="${i}" aria-haspopup="dialog" aria-label="${esc(player.name)}${player.injury ? ", " + esc(injuryLabel(player.injury)) : ""}, ${isPoints() ? "FP/G" : "score"} ${fmtScore(player.adjusted_z)}. Open details">
+        <span class="card__top">${photo(player, 'card__photo')}<span class="card__tag">${esc(tag)}</span></span>
+        <span class="card__body">
+          <span class="card__name">${esc(player.name)}${injuryTag(player)}</span>
+          ${meta ? `<span class="card__meta">${esc(meta)}</span>` : ''}
+          <span class="card__score"><b data-score="${player.adjusted_z}" data-dec="${scoreDecimals()}">${(0).toFixed(scoreDecimals())}</b><small>${isPoints() ? 'FP/G' : 'score'}</small></span>
+          <dl class="card__stats">
+            <div><dt>PTS</dt><dd>${s.PTS}</dd></div>
+            <div><dt>REB</dt><dd>${s.REB}</dd></div>
+            <div><dt>AST</dt><dd>${s.AST}</dd></div>
+          </dl>
+        </span>
+      </button>`;
+    }
+
+    function skeletonCards(count) {
+      return Array.from({ length: count }, () => '<div class="card--skel" aria-hidden="true"></div>').join('');
+    }
+
+    function summaryHTML(team, average) {
+      const n = team.length;
+      const sum = fn => team.reduce((t, p) => t + fn(p), 0);
+      const total = sum(p => p.adjusted_z);
+      const unit = isPoints() ? 'FP/G' : 'score';
+      const avg = key => sum(p => p.stats[key]) / (n || 1);
+      const item = (name, value, decimals, cls) =>
+        `<div class="${cls || ''}"><dt>${name}</dt><dd data-count="${value}" data-dec="${decimals}">0</dd></div>`;
+      return `<dl class="summary rise" style="--d:0">
+        ${item('Players', n, 0)}
+        ${average ? item('Avg ' + unit, total / (n || 1), scoreDecimals(), 'total') : item('Total ' + unit, total, 1, 'total')}
+        ${item('Avg points', avg('PTS'), 1)}
+        ${item('Avg rebounds', avg('REB'), 1)}
+        ${item('Avg assists', avg('AST'), 1)}
+      </dl>`;
+    }
+
+    function animateCounts(root) {
+      root.querySelectorAll('[data-count]').forEach(el => countUp(el, parseFloat(el.dataset.count), parseInt(el.dataset.dec, 10), 1100));
+      root.querySelectorAll('[data-score]').forEach((el, i) => {
+        const run = () => countUp(el, parseFloat(el.dataset.score), parseInt(el.dataset.dec || '2', 10), 1000);
+        if (reduced) run();
+        else setTimeout(run, i * 60 + 150);
+      });
+    }
+
+    function renderTeam() {
+      $('team-summary').innerHTML = summaryHTML(state.team);
+      $('team-grid').innerHTML = state.team.map((p, i) => cardHTML(p, i, 'R' + p.round)).join('');
+      animateCounts($('your-team-tab'));
+    }
+
+    /* ─── Player dialog ─── */
+    const dialog = $('player-dialog');
+    const panel = $('pd-panel');
+
+    // what the dialog shows depends on where it was opened from: the mock draft or the season tracker
+    function draftView() {
+      return {
+        kind: 'draft',
+        grid: 'team-grid',
+        list: state.team,
+        stats: state.poolStats,
+        meta: p => `Round ${p.round}, pick ${p.pick}` + (p.poolRank ? `, pool rank ${p.poolRank}` : ''),
+        facts: p => [['Games', p.gp], ['Pool size', state.pool.length]]
+      };
+    }
+
+    function statRowsHTML(player, view) {
+      return METRICS.map((m, k) => {
+        const value = m.get(player.stats);
+        const pct = percentile(m, value, view.stats);
+        const { rank, total } = rankIn(m, value, view.stats);
+        const avg = view.stats[m.key].mean;
+        let sub = m.sub ? `<small>${m.sub(player.stats)}</small>` : '';
+        if (view.kind === 'season' && player.last) {
+          sub = `<small>last season ${fmtMetric(m, m.get(player.last))}</small>`;
+        }
+        return `<div class="stat">
+          <span class="stat__label">${m.label}</span>
+          <span class="stat__value">${fmtMetric(m, value)}${sub}</span>
+          <span class="bar" aria-hidden="true"><i style="--w:${pct}%;--k:${k}"></i></span>
+          <span class="stat__pct" title="Better than ${pct}% of the pool">#${rank}<small>of ${total}, avg ${fmtMetric(m, avg)}</small></span>
+        </div>`;
+      }).join('');
+    }
+
+    function fillDialog(i, direction) {
+      const view = state.view;
+      const player = view.list[i];
+      state.current = i;
+      $('pd-count').textContent = `${i + 1} / ${view.list.length}`;
+      $('pd-meta').textContent = view.meta(player);
+      $('pd-name').innerHTML = esc(player.name) + injuryTag(player);
+      renderInjuryDetail(player);
+      setPhoto($('pd-photo'), player);
+      $('pd-facts').innerHTML = view.facts(player).map(([name, value]) => `<li>${name} <b>${value}</b></li>`).join('');
+      $('pd-stats').innerHTML = statRowsHTML(player, view);
+      countUp($('pd-score'), player.adjusted_z, scoreDecimals(), 900);
+      $('pd-score-label').textContent = view.scoreLabel || (isPoints() ? 'FP/G' : 'score');
+
+      const body = $('pd-body');
+      body.classList.remove('to-next', 'to-prev');
+      if (direction && !reduced) {
+        void body.offsetWidth;
+        body.classList.add(direction > 0 ? 'to-next' : 'to-prev');
+      }
+      $('pd-prev').disabled = i === 0;
+      $('pd-next').disabled = i === view.list.length - 1;
+    }
+
+    function cardFor(i) {
+      return document.querySelector(`#${state.view.grid} .card[data-i="${i}"]`);
+    }
+
+    function openPlayer(i, card, view) {
+      if (state.busy) return;
+      state.pointerOpen = !keyboardModality;
+      state.view = view;
+      const open = () => {
+        fillDialog(i, 0);
+        document.body.classList.add('is-locked');
+        dialog.showModal();
+        $('pd-close').focus({ preventScroll: true });
+      };
+      if (card && document.startViewTransition && !reduced) {
+        state.busy = true;
+        card.style.viewTransitionName = 'player';
+        const transition = document.startViewTransition(() => {
+          card.style.viewTransitionName = '';
+          panel.style.viewTransitionName = 'player';
+          open();
+        });
+        transition.finished.finally(() => {
+          panel.style.viewTransitionName = '';
+          state.busy = false;
+        });
+      } else {
+        dialog.classList.add('fx');
+        open();
+      }
+    }
+
+    function closePlayer() {
+      if (!dialog.open || state.busy) return;
+      const card = cardFor(state.current);
+      const close = () => dialog.close();
+      if (document.startViewTransition && !reduced && card) {
+        state.busy = true;
+        panel.style.viewTransitionName = 'player';
+        const transition = document.startViewTransition(() => {
+          panel.style.viewTransitionName = '';
+          card.style.viewTransitionName = 'player';
+          close();
+        });
+        transition.finished.finally(() => {
+          card.style.viewTransitionName = '';
+          state.busy = false;
+        });
+      } else {
+        close();
+      }
+    }
+
+    function stepPlayer(step) {
+      const next = state.current + step;
+      if (next < 0 || next >= state.view.list.length) return;
+      fillDialog(next, step);
+    }
+
+    $('team-grid').addEventListener('click', e => {
+      const card = e.target.closest('.card[data-i]');
+      if (card) openPlayer(parseInt(card.dataset.i, 10), card, draftView());
+    });
+
+    $('pd-close').addEventListener('click', closePlayer);
+    $('pd-prev').addEventListener('click', () => stepPlayer(-1));
+    $('pd-next').addEventListener('click', () => stepPlayer(1));
+
+    dialog.addEventListener('click', e => {
+      if (e.target === dialog) closePlayer();
+    });
+
+    dialog.addEventListener('cancel', e => {
+      e.preventDefault();
+      closePlayer();
+    });
+
+    // was the last input the keyboard? decides whether a restored focus ring should show
+    let keyboardModality = false;
+    document.addEventListener('keydown', () => { keyboardModality = true; }, true);
+    document.addEventListener('mousedown', () => { keyboardModality = false; }, true);
+
+    dialog.addEventListener('close', () => {
+      document.body.classList.remove('is-locked');
+      // opened with the mouse: closing returns focus to the card, which must not look keyboard-focused
+      if (state.pointerOpen) {
+        setTimeout(() => {
+          const el = document.activeElement;
+          if (el && el.classList && el.classList.contains('card')) el.blur();
+        }, 0);
+      }
+    });
+
+    dialog.addEventListener('keydown', e => {
+      if (e.key === 'ArrowRight') stepPlayer(1);
+      else if (e.key === 'ArrowLeft') stepPlayer(-1);
+    });
+
+    /* ─── Draft simulation ─── */
     async function simulateDraft() {
       const problem = validateInputs();
       showError($('setup-error'), problem);
       if (problem) return;
 
       const button = $('simulate-btn');
-      const teamBody = document.querySelector('#your_team_table tbody');
       const poolBody = document.querySelector('#draft_pool_table tbody');
 
       button.textContent = 'Simulating...';
       button.disabled = true;
-      teamBody.innerHTML = skeletonRows(8);
-      poolBody.innerHTML = skeletonRows(12);
+      $('team-summary').innerHTML = '';
+      $('team-grid').innerHTML = skeletonCards(8);
+      poolBody.innerHTML = skeletonRows(10);
 
       try {
         const data = await postJSON('/simulate_draft');
-        const { numTeams, numRounds } = readSettings();
+        const settings = readSettings();
+        const { numTeams, numRounds, yourPick } = settings;
 
-        const pool = data.top_draft_pool.slice(0, numTeams * numRounds);
-        const poolRank = new Map(data.top_draft_pool.map((p, i) => [p.name, i + 1]));
-        const mine = new Set(data.your_team.map(p => p.name));
+        state.settings = settings;
+        state.pool = data.top_draft_pool;
+        state.poolStats = buildPoolStats(state.pool);
 
-        teamBody.innerHTML = data.your_team.map(p => playerRow(p, poolRank.get(p.name) || '', false)).join('')
-          || emptyRow('No players were drafted. Try more rounds.');
-        poolBody.innerHTML = pool.map((p, i) => playerRow(p, i + 1, mine.has(p.name))).join('')
+        const poolRank = new Map(state.pool.map((p, i) => [p.name, i + 1]));
+        state.poolRank = poolRank;
+        state.team = data.your_team.map((p, i) => Object.assign({}, p, {
+          round: i + 1,
+          pick: overallPick(i, yourPick, numTeams),
+          poolRank: poolRank.get(p.name) || 0
+        }));
+
+        const mine = new Set(state.team.map(p => p.name));
+        const shown = state.pool.slice(0, numTeams * numRounds);
+        state.poolShown = shown;
+        poolBody.innerHTML = shown.map((p, i) => poolRow(p, i + 1, mine.has(p.name))).join('')
           || emptyRow('No players available.');
+        observeRows(poolBody);
 
-        hasTeam = data.your_team.length > 0;
+        hasTeam = state.team.length > 0;
+        state.draftScoring = scoring;
+        updateDraftStale();
         switchTab('your-team');
+        if (hasTeam) {
+          renderTeam();
+        } else {
+          $('team-summary').innerHTML = '';
+          $('team-grid').innerHTML = '<p class="notice" style="grid-column:1 / -1">No players were drafted. Try more rounds.</p>';
+        }
       } catch (err) {
         console.error(err);
         const msg = 'Could not load the draft. Check your connection and try again.';
-        teamBody.innerHTML = emptyRow(msg, true);
+        $('team-grid').innerHTML = `<p class="notice form-error">${msg}</p>`;
         poolBody.innerHTML = emptyRow(msg, true);
         showError($('setup-error'), msg);
         hasTeam = false;
@@ -834,9 +2389,10 @@
     }
 
     function chartDefaults() {
-      Chart.defaults.font.family = "'Instrument Sans', system-ui, sans-serif";
+      Chart.defaults.font.family = "'Geist', system-ui, sans-serif";
       Chart.defaults.font.size = 12;
       Chart.defaults.color = COLORS.muted;
+      Chart.defaults.animation = { duration: reduced ? 0 : 1000, easing: 'easeOutQuart' };
     }
 
     function axisOptions(extraY) {
@@ -912,7 +2468,7 @@
           datasets: [{
             label: 'Difference from league (%)',
             data: differences,
-            backgroundColor: differences.map(v => (v >= 0 ? COLORS.good : COLORS.bad)),
+            backgroundColor: differences.map(v => (v >= 0 ? COLORS.accent : COLORS.bad)),
             borderRadius: 3
           }]
         },
@@ -925,9 +2481,591 @@
       });
     }
 
+    /* ─── Season tracker ─── */
+    const ROSTER_KEY = 'hooplytics.roster';
+    const MAX_ROSTER = 30;
+
+    const season = {
+      data: null,
+      loading: null,
+      minGp: null,
+      top: 25,
+      roster: [],
+      byName: new Map(),
+      pool: [],
+      poolStats: {},
+      view: null
+    };
+
+    // same normalization as the server, so typed names match regardless of accents and punctuation
+    function normalizeName(name) {
+      return name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+        .replace(/[.'’,\-]/g, '')
+        .replace(/\b(jr|sr|ii|iii|iv|v)\b/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function loadRoster() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(ROSTER_KEY));
+        return Array.isArray(saved) ? saved.filter(n => typeof n === 'string').slice(0, MAX_ROSTER) : [];
+      } catch (err) {
+        return [];
+      }
+    }
+
+    function saveRoster() {
+      try {
+        localStorage.setItem(ROSTER_KEY, JSON.stringify(season.roster));
+      } catch (err) {
+        // storage can be blocked; the roster then lasts for this visit only
+      }
+    }
+
+    function setSeasonStatus(html) {
+      document.querySelectorAll('[data-season-status]').forEach(el => { el.innerHTML = html; });
+    }
+
+    function renderSeasonStatus() {
+      const d = season.data;
+      let time = '';
+      try {
+        time = new Date(d.fetched_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      } catch (err) {
+        time = '';
+      }
+      setSeasonStatus(
+        `<span><b>${esc(d.season)}</b> regular season, through ${d.max_gp} games</span>` +
+        `<span>${d.qualified} players ranked: ${d.min_gp}+ games, plus anyone injured</span>` +
+        `<span>Updated ${esc(time)}${d.stale ? ', showing saved data' : ''}</span>` +
+        '<button type="button" class="btn btn--ghost" data-refresh>Refresh</button>'
+      );
+    }
+
+    function renderSeasonLoading() {
+      setSeasonStatus('<span>Loading current season stats...</span>');
+      if (season.data) return;
+      $('roster-grid').innerHTML = season.roster.length ? skeletonCards(Math.min(season.roster.length, 8)) : '';
+      document.querySelector('#top_table tbody').innerHTML = skeletonRows(10);
+    }
+
+    function renderSeasonError() {
+      setSeasonStatus('<span class="form-error">Could not load current season stats.</span><button type="button" class="btn btn--ghost" data-refresh>Try again</button>');
+      if (season.data) return;
+      $('roster-grid').innerHTML = '<div class="notice form-error" style="grid-column:1 / -1">Could not load current season stats. Check your connection and try again.</div>';
+      document.querySelector('#top_table tbody').innerHTML = emptyRow('Could not load current season stats. Check your connection and try again.', true);
+    }
+
+    function loadSeason(options) {
+      if (season.loading) return season.loading;
+      renderSeasonLoading();
+
+      const params = new URLSearchParams();
+      if (season.minGp) params.set('min_gp', season.minGp);
+      params.set('scoring', scoring);
+      if (options && options.refresh) params.set('refresh', '1');
+      const query = params.toString();
+
+      season.loading = fetch('/season/stats' + (query ? '?' + query : ''))
+        .then(res => {
+          if (!res.ok) throw new Error(`Request failed (${res.status})`);
+          return res.json();
+        })
+        .then(applySeason)
+        .catch(err => {
+          console.error(err);
+          renderSeasonError();
+          throw err;
+        })
+        .finally(() => { season.loading = null; });
+      return season.loading;
+    }
+
+    function ensureSeason() {
+      return season.data ? Promise.resolve() : loadSeason();
+    }
+
+    function applySeason(data) {
+      season.data = data;
+      season.byName = new Map(data.players.map(p => [normalizeName(p.name), p]));
+      season.pool = data.players.filter(p => p.rank);
+      season.poolStats = buildPoolStats(season.pool);
+
+      const input = $('min-gp');
+      if (document.activeElement !== input) input.value = data.min_gp;
+
+      renderSeasonStatus();
+      renderRoster();
+      renderTop();
+      if (picker.open) {
+        picker.items = pickerMatches($('roster-input').value);
+        renderPicker();
+      }
+    }
+
+    function rosterEntries() {
+      const found = [];
+      const missing = [];
+      season.roster.forEach(name => {
+        const player = season.byName.get(normalizeName(name));
+        if (player) found.push(player);
+        else missing.push(name);
+      });
+      found.sort((a, b) => b.adjusted_z - a.adjusted_z);
+      return { found, missing };
+    }
+
+    function seasonView(list) {
+      const d = season.data;
+      return {
+        kind: 'season',
+        grid: 'roster-grid',
+        list,
+        stats: season.poolStats,
+        meta: p => `${p.team || 'NBA'}, ` + (p.rank ? `rank ${p.rank} of ${d.qualified}` : `under the ${d.min_gp}-game minimum`),
+        facts: p => [['Games', p.gp], ['Ranked players', d.qualified]]
+      };
+    }
+
+    function removeButton(name) {
+      return `<button type="button" class="card__remove" data-remove="${esc(name)}" aria-label="Remove ${esc(name)} from roster">Remove</button>`;
+    }
+
+    function renderRoster() {
+      if (!season.data) return;
+      const grid = $('roster-grid');
+      const { found, missing } = rosterEntries();
+      season.view = seasonView(found);
+
+      if (!season.roster.length) {
+        $('roster-summary').innerHTML = '';
+        grid.innerHTML = '<div class="notice" style="grid-column:1 / -1"><strong>No players yet.</strong> Add a player above to see how they are doing this season.</div>';
+        return;
+      }
+
+      $('roster-summary').innerHTML = found.length ? summaryHTML(found, true) : '';
+      const cells = found.map((p, i) =>
+        `<div class="cell">${cardHTML(p, i, p.rank ? '#' + p.rank : 'n/a', `${p.team || 'NBA'}, ${p.gp} GP`)}${removeButton(p.name)}</div>`);
+      const empty = missing.map((name, i) =>
+        `<div class="cell"><div class="card card--empty" style="--i:${found.length + i}"><span class="card__name">${esc(name)}</span><p>No games played yet this season.</p></div>${removeButton(name)}</div>`);
+      grid.innerHTML = cells.concat(empty).join('');
+      animateCounts($('roster-tab'));
+    }
+
+    function renderTop() {
+      if (!season.data) return;
+      const tbody = document.querySelector('#top_table tbody');
+      const mine = new Set(season.roster.map(normalizeName));
+      const rows = season.pool.slice(0, season.top);
+      season.topShown = rows;
+      tbody.innerHTML = rows.map(p => poolRow(p, p.rank, mine.has(normalizeName(p.name)))).join('')
+        || emptyRow('No players have played enough games yet. Lower the minimum games.');
+      observeRows(tbody);
+    }
+
+    async function addPlayer(raw) {
+      const errorEl = $('roster-error');
+      showError(errorEl, '');
+      const typed = raw.trim();
+      if (!typed) {
+        showError(errorEl, 'Type a player name to add.');
+        return;
+      }
+
+      try {
+        await ensureSeason();
+      } catch (err) {
+        showError(errorEl, 'Could not load season stats. Try again.');
+        return;
+      }
+
+      const player = season.byName.get(normalizeName(typed));
+      if (!player) {
+        showError(errorEl, `No player named "${typed}" in the ${season.data.season} stats. Pick a name from the list.`);
+        return;
+      }
+      if (season.roster.some(n => normalizeName(n) === normalizeName(player.name))) {
+        showError(errorEl, `${player.name} is already on your roster.`);
+        return;
+      }
+      if (season.roster.length >= MAX_ROSTER) {
+        showError(errorEl, `Rosters hold up to ${MAX_ROSTER} players.`);
+        return;
+      }
+
+      season.roster.push(player.name);
+      saveRoster();
+      $('roster-input').value = '';
+      renderRoster();
+      renderTop();
+    }
+
+    function removePlayer(name) {
+      season.roster = season.roster.filter(n => normalizeName(n) !== normalizeName(name));
+      saveRoster();
+      showError($('roster-error'), '');
+      renderRoster();
+      renderTop();
+    }
+
+    $('roster-form').addEventListener('submit', e => {
+      e.preventDefault();
+      addPlayer($('roster-input').value);
+    });
+
+    /* ─── Player picker (the roster dropdown) ─── */
+    const PICKER_LIMIT = 12;
+    const picker = { open: false, items: [], active: -1 };
+    const pickerInput = $('roster-input');
+    const pickerList = $('roster-listbox');
+
+    // players already on the roster are left out; prefix matches come first, then best score first
+    function pickerMatches(query) {
+      const q = normalizeName(query);
+      const words = q.split(' ').filter(Boolean);
+      const onRoster = new Set(season.roster.map(normalizeName));
+      const players = season.data ? season.data.players : [];
+      const found = players.filter(p => {
+        const n = normalizeName(p.name);
+        return !onRoster.has(n) && words.every(w => n.includes(w));
+      });
+      if (q) found.sort((a, b) => normalizeName(b.name).startsWith(q) - normalizeName(a.name).startsWith(q));
+      return found.slice(0, PICKER_LIMIT);
+    }
+
+    function pickerOptionHTML(player, i) {
+      return `<li role="option" id="roster-opt-${i}" class="opt" data-i="${i}" aria-selected="${i === picker.active}">` +
+        `${photo(player, 'opt__photo')}` +
+        `<span class="opt__text"><span class="opt__name">${esc(player.name)}</span><small>${esc(player.team || 'NBA')}</small></span></li>`;
+    }
+
+    function renderPicker() {
+      if (!picker.open) {
+        pickerList.hidden = true;
+        pickerInput.setAttribute('aria-expanded', 'false');
+        pickerInput.removeAttribute('aria-activedescendant');
+        return;
+      }
+      if (!season.data) pickerList.innerHTML = '<li class="opt opt--note" role="presentation">Loading players...</li>';
+      else if (!picker.items.length) pickerList.innerHTML = '<li class="opt opt--note" role="presentation">No players match.</li>';
+      else pickerList.innerHTML = picker.items.map(pickerOptionHTML).join('');
+      pickerList.hidden = false;
+      pickerInput.setAttribute('aria-expanded', 'true');
+      if (picker.active >= 0 && picker.items[picker.active]) pickerInput.setAttribute('aria-activedescendant', 'roster-opt-' + picker.active);
+      else pickerInput.removeAttribute('aria-activedescendant');
+    }
+
+    function setPickerActive(index) {
+      picker.active = index;
+      pickerList.querySelectorAll('.opt[data-i]').forEach(el => {
+        const on = parseInt(el.dataset.i, 10) === index;
+        el.setAttribute('aria-selected', on);
+        if (on) el.scrollIntoView({ block: 'nearest' });
+      });
+      if (index >= 0) pickerInput.setAttribute('aria-activedescendant', 'roster-opt-' + index);
+      else pickerInput.removeAttribute('aria-activedescendant');
+    }
+
+    function closePicker() {
+      picker.open = false;
+      renderPicker();
+    }
+
+    function openPicker() {
+      picker.open = true;
+      picker.items = pickerMatches(pickerInput.value);
+      picker.active = pickerInput.value.trim() && picker.items.length ? 0 : -1;
+      renderPicker();
+      if (!season.data) ensureSeason().catch(() => {});
+    }
+
+    async function choosePlayer(player) {
+      closePicker();
+      await addPlayer(player.name);
+      picker.suppress = true;
+      pickerInput.focus();
+      picker.suppress = false;
+    }
+
+    pickerInput.addEventListener('focus', () => {
+      if (!picker.suppress) openPicker();
+    });
+    pickerInput.addEventListener('input', openPicker);
+    pickerInput.addEventListener('click', () => {
+      if (!picker.open) openPicker();
+    });
+
+    pickerInput.addEventListener('keydown', e => {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (!picker.open) {
+          openPicker();
+          return;
+        }
+        const n = picker.items.length;
+        if (!n) return;
+        const step = e.key === 'ArrowDown' ? 1 : -1;
+        setPickerActive(picker.active < 0 ? (step > 0 ? 0 : n - 1) : (picker.active + step + n) % n);
+      } else if (e.key === 'Enter') {
+        if (picker.open && picker.items[picker.active]) {
+          e.preventDefault();
+          choosePlayer(picker.items[picker.active]);
+        }
+      } else if (e.key === 'Escape') {
+        if (picker.open) {
+          e.preventDefault();
+          closePicker();
+        }
+      } else if (e.key === 'Tab') {
+        closePicker();
+      }
+    });
+
+    // mousedown (not click) so the input keeps focus while an option is picked
+    pickerList.addEventListener('mousedown', e => {
+      const option = e.target.closest('.opt[data-i]');
+      if (!option) return;
+      e.preventDefault();
+      choosePlayer(picker.items[parseInt(option.dataset.i, 10)]);
+    });
+
+    pickerList.addEventListener('mouseover', e => {
+      const option = e.target.closest('.opt[data-i]');
+      if (option) setPickerActive(parseInt(option.dataset.i, 10));
+    });
+
+    document.addEventListener('mousedown', e => {
+      if (picker.open && !e.target.closest('.picker')) closePicker();
+    });
+
+    $('roster-form').addEventListener('submit', closePicker);
+
+    $('roster-grid').addEventListener('click', e => {
+      const remove = e.target.closest('[data-remove]');
+      if (remove) {
+        removePlayer(remove.dataset.remove);
+        return;
+      }
+      const card = e.target.closest('.card[data-i]');
+      if (card && season.view) openPlayer(parseInt(card.dataset.i, 10), card, season.view);
+    });
+
+    document.addEventListener('click', e => {
+      if (e.target.closest('[data-refresh]')) loadSeason({ refresh: true }).catch(() => {});
+    });
+
+    let minGpTimer = null;
+    $('min-gp').addEventListener('input', function () {
+      clearTimeout(minGpTimer);
+      minGpTimer = setTimeout(() => {
+        const value = parseInt(this.value, 10);
+        if (!(value >= 1 && value <= 82)) return;
+        if (season.data && value === season.data.min_gp) return;
+        season.minGp = value;
+        Promise.resolve(season.loading).catch(() => {}).then(() => loadSeason()).catch(() => {});
+      }, 450);
+    });
+
+    document.querySelectorAll('input[name="top-n"]').forEach(radio => {
+      radio.addEventListener('change', () => {
+        season.top = parseInt(radio.value, 10);
+        renderTop();
+      });
+    });
+
+    $('top-filters').addEventListener('submit', e => e.preventDefault());
+
+    /* ─── Waiver wire ─── */
+    const WAIVER_COLUMNS = [
+      ['#', 'l'], ['Player', 'l'], ['Score', ''], ['Rank', ''], ['MIN', ''], ['PTS', ''], ['REB', ''],
+      ['AST', ''], ['STL', ''], ['BLK', ''], ['3PM', ''], ['TOV', '']
+    ];
+    const WAIVER_STATS = ['MIN', 'PTS', 'REB', 'AST', 'STL', 'BLK', 'FG3M', 'TOV'];
+    const waiver = { data: null, loading: null, window: 5 };
+
+    function setWaiverStatus(html) {
+      document.querySelectorAll('[data-waiver-status]').forEach(el => { el.innerHTML = html; });
+    }
+
+    function renderWaiverHead() {
+      $('waiver_table').querySelector('thead').innerHTML =
+        '<tr>' + WAIVER_COLUMNS.map(([name, cls]) => `<th scope="col" class="${cls}">${name === 'Score' ? scoreName() : name}</th>`).join('') + '</tr>';
+    }
+
+    function signed(value) {
+      return (value > 0 ? '+' : '') + value;
+    }
+
+    // green when the recent number is better than the season average (for turnovers, lower is better)
+    function waiverCell(player, key) {
+      const value = player.recent[key];
+      const change = player.change[key];
+      const better = key === 'TOV' ? change < 0 : change > 0;
+      const cls = change === 0 ? '' : better ? 'up' : 'down';
+      return `<td class="n">${value}<small class="${cls}">${signed(change)}</small></td>`;
+    }
+
+    function waiverRow(player, i) {
+      return `<tr class="reveal" data-i="${i}">
+        <td class="rank n l">${i + 1}</td>
+        <td class="l"><div class="player">${photo(player, 'avatar')}<span><button type="button" class="rowlink" aria-haspopup="dialog">${esc(player.name)}</button><small>${esc(player.team)}</small></span></div></td>
+        <td class="n score">${fmtScore(player.score)}<small class="up">${signed(+Number(player.trend).toFixed(scoreDecimals()))}</small></td>
+        <td class="n">#${player.rank}</td>
+        ${WAIVER_STATS.map(key => waiverCell(player, key)).join('')}
+      </tr>`;
+    }
+
+    function renderWaiver() {
+      const d = waiver.data;
+      const tbody = $('waiver_table').querySelector('tbody');
+      let time = '';
+      try {
+        time = new Date(d.generated_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      } catch (err) {
+        time = '';
+      }
+      const shown = d.matches > d.players.length ? `, showing the top ${d.players.length}` : '';
+      setWaiverStatus(
+        `<span><b>Last ${d.window} games</b> vs season averages</span>` +
+        `<span>${d.examined} players checked, ${d.matches} trending up${shown}</span>` +
+        `<span>Updated ${esc(time)}${d.failed ? `, ${d.failed} could not be checked` : ''}</span>` +
+        '<button type="button" class="btn btn--ghost" data-waiver-refresh>Refresh</button>'
+      );
+      tbody.innerHTML = d.players.map(waiverRow).join('')
+        || emptyRow('No one outside the top 110 is trending up in both minutes and production right now.', false, WAIVER_COLUMNS.length);
+      observeRows(tbody);
+    }
+
+    function loadWaiver(options) {
+      if (waiver.loading) return waiver.loading;
+      const tbody = $('waiver_table').querySelector('tbody');
+      setWaiverStatus('<span>Scanning recent games for pickup candidates. The first scan takes several seconds.</span>');
+      if (!waiver.data || (options && options.skeleton)) tbody.innerHTML = skeletonRows(10, WAIVER_COLUMNS.length);
+
+      const params = new URLSearchParams({ window: waiver.window, scoring: scoring });
+      if (options && options.refresh) params.set('refresh', '1');
+
+      waiver.loading = fetch('/season/waiver?' + params.toString())
+        .then(res => {
+          if (!res.ok) throw new Error(`Request failed (${res.status})`);
+          return res.json();
+        })
+        .then(data => {
+          waiver.data = data;
+          renderWaiver();
+        })
+        .catch(err => {
+          console.error(err);
+          setWaiverStatus('<span class="form-error">Could not load waiver wire help.</span><button type="button" class="btn btn--ghost" data-waiver-refresh>Try again</button>');
+          if (!waiver.data) tbody.innerHTML = emptyRow('Could not load waiver wire help. Check your connection and try again.', true, WAIVER_COLUMNS.length);
+          throw err;
+        })
+        .finally(() => { waiver.loading = null; });
+      return waiver.loading;
+    }
+
+    function ensureWaiver() {
+      return waiver.data ? Promise.resolve() : loadWaiver();
+    }
+
+    document.querySelectorAll('input[name="waiver-window"]').forEach(radio => {
+      radio.addEventListener('change', () => {
+        waiver.window = parseInt(radio.value, 10);
+        Promise.resolve(waiver.loading).catch(() => {}).then(() => loadWaiver({ skeleton: true })).catch(() => {});
+      });
+    });
+
+    document.addEventListener('click', e => {
+      if (e.target.closest('[data-waiver-refresh]')) loadWaiver({ refresh: true }).catch(() => {});
+    });
+
+    $('waiver-filters').addEventListener('submit', e => e.preventDefault());
+
+    /* ─── Open the player card from a table row ─── */
+    function poolView() {
+      return {
+        kind: 'draft',
+        grid: 'draft_pool_table',
+        list: state.poolShown || [],
+        stats: state.poolStats,
+        meta: p => {
+          const mine = state.team.find(t => t.name === p.name);
+          return `Pool rank ${state.poolRank.get(p.name) || ''}` + (mine ? `, your pick ${mine.pick} (round ${mine.round})` : '');
+        },
+        facts: p => [['Games', p.gp], ['Pool size', state.pool.length]]
+      };
+    }
+
+    // waiver rows only carry recent numbers, so the card shows the player's season line plus the recent form
+    function waiverView() {
+      const d = season.data;
+      const list = waiver.data.players.map(w => {
+        const seasonPlayer = season.byName.get(normalizeName(w.name));
+        return Object.assign({}, seasonPlayer, { adjusted_z: w.score, seasonScore: seasonPlayer && seasonPlayer.adjusted_z, waiver: w });
+      });
+      return {
+        kind: 'season',
+        grid: 'waiver_table',
+        scoreLabel: 'recent ' + (isPoints() ? 'FP/G' : 'score'),
+        list,
+        stats: season.poolStats,
+        meta: p => `${p.team || 'NBA'}, rank ${p.rank} of ${d.qualified}, trending up over the last ${waiver.data.window} games`,
+        facts: p => [
+          ['Games', p.gp],
+          ['Recent minutes', `${p.waiver.recent.MIN} (${signed(p.waiver.change.MIN)})`],
+          ['Season ' + (isPoints() ? 'FP/G' : 'score'), fmtScore(p.seasonScore)]
+        ]
+      };
+    }
+
+    $('draft_pool_table').addEventListener('click', e => {
+      const row = e.target.closest('tr[data-i]');
+      if (row) openPlayer(parseInt(row.dataset.i, 10), null, poolView());
+    });
+
+    $('top_table').addEventListener('click', e => {
+      const row = e.target.closest('tr[data-i]');
+      if (!row || !season.data) return;
+      openPlayer(parseInt(row.dataset.i, 10), null, Object.assign(seasonView(season.topShown || []), { grid: 'top_table' }));
+    });
+
+    $('waiver_table').addEventListener('click', async e => {
+      const row = e.target.closest('tr[data-i]');
+      if (!row || !waiver.data) return;
+      try {
+        await ensureSeason();
+      } catch (err) {
+        return;
+      }
+      const view = waiverView();
+      const i = parseInt(row.dataset.i, 10);
+      if (view.list[i] && view.list[i].name) openPlayer(i, null, view);
+    });
+
+    /* ─── Init ─── */
+    // the top bar changes height with the layout; sticky table headers sit just below it
+    const topbar = document.querySelector('.topbar');
+    function syncTopbarHeight() {
+      document.documentElement.style.setProperty('--topbar-h', topbar.getBoundingClientRect().height + 'px');
+    }
+    syncTopbarHeight();
+    if ('ResizeObserver' in window) new ResizeObserver(syncTopbarHeight).observe(topbar);
+    else window.addEventListener('resize', syncTopbarHeight);
+
     renderHeads();
-    document.querySelector('#your_team_table tbody').innerHTML = emptyRow('Simulate a draft to see your team.');
+    renderWaiverHead();
+    renderScoringControls();
+    applyScoringText();
+    season.roster = loadRoster();
+    renderPicks();
     document.querySelector('#draft_pool_table tbody').innerHTML = emptyRow('Simulate a draft to see the ranked pool.');
+    $('team-grid').innerHTML =
+      '<div class="notice" style="grid-column:1 / -1"><strong>No team yet.</strong> Set up your league and simulate a draft first.<br><button type="button" class="btn btn--ghost" id="to-setup">Go to setup</button></div>';
+    $('team-grid').addEventListener('click', e => {
+      if (e.target.id === 'to-setup') switchTab('settings');
+    });
+    moveIndicator();
   </script>
 </body>
 
